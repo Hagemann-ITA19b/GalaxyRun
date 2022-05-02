@@ -157,6 +157,7 @@ class Stormbie(pygame.sprite.Sprite):
         if self.rect.left >= posy: #Settings.window_width:
                 self.speed_h = -2
                 self.facing = "L"
+                print("!!1")
 
 
 class Stormtrooper(pygame.sprite.Sprite):
@@ -349,7 +350,6 @@ class Player(pygame.sprite.Sprite):
             
 
 
-
     def moveR(self):
         global facing, score_value
         Player.get_pos(self)
@@ -373,8 +373,7 @@ class Player(pygame.sprite.Sprite):
                     self.images.append(bitmap)
             print(self.speed)
 
-                    
-
+        
 
     def moveUp(self):
         global fuel
@@ -440,7 +439,7 @@ class Player(pygame.sprite.Sprite):
         global fuel
         global endurance
         Game.invtimer(self)
-        Game.fueltimer(self)
+        
         if self.shieldpoints <= 0:
             if self.playing_shieldlow == False:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'shields_low.mp3')))
@@ -460,16 +459,17 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top == 570 and fuel < 200:
             self.run_fuel = True
             print(self.passed_fueltime)
-            if self.passed_fueltime == 0:
-                if fuel < 200:
+            if fuel < 200:
+                Game.fueltimer(self)
+                if self.passed_fueltime >= 300:
                     fuel += 0.4
-                if fuel == 200:
-                    #self.passed_fueltime = 0
-                    pass
-                
-                if self.endurance < 100:
-                    self.endurance += 0.1
-                    #print(self.endurance)
+                    if fuel >= 200:
+                        self.passed_fueltime = 0
+                        self.run_fuel = False
+                    
+                    if self.endurance < 100:
+                        self.endurance += 0.1
+                        #print(self.endurance)
 
                  
   
@@ -919,7 +919,6 @@ class Game(object):
         
         if leftclick == True:
             if fuel >= 5:
-                if self.player.passed_fueltime == 0:
                     fuel = fuel - 5
                     Player.flamethrower(self.player)
                     if self.flames_on == False:
@@ -964,12 +963,7 @@ class Game(object):
     
     def fueltimer(self):
         if self.run_fuel == True:
-            if self.passed_fueltime <= 420: #60(ticks) * 5(seconds) = 300
                 self.passed_fueltime = self.passed_fueltime+ 1
-            if self.passed_fueltime >= 420:     
-                        self.run_fuel = False#12301j312ß093ij12
-
-                        self.passed_fueltime = 0
 
     def invtimer(self):
         if self.run_inv == True:
