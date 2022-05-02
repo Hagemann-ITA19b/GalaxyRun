@@ -256,6 +256,7 @@ class Player(pygame.sprite.Sprite):
         self.run_inv = False
         self.run_fuel = False
         self.images = []
+        self.usefuel = False
         if facing == "R":
             for i in range(2):
                 bitmap = pygame.image.load(os.path.join(
@@ -299,7 +300,6 @@ class Player(pygame.sprite.Sprite):
                 self.image = self.images[self.imageindex]
                     
             
-
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
@@ -396,7 +396,7 @@ class Player(pygame.sprite.Sprite):
                             bitmap = pygame.image.load(os.path.join(
                                 Settings.path_image, f"jetpack_L{i}.png"))
                             self.images.append(bitmap)
-                    
+                    self.usefuel = True
                     fuel -= 1
 
                     if fuel <= 0:
@@ -433,8 +433,6 @@ class Player(pygame.sprite.Sprite):
         self.score_muliplier = 0.1
 
 
-
-        
     def refill(self):
         global fuel
         global endurance
@@ -455,8 +453,12 @@ class Player(pygame.sprite.Sprite):
                 self.passed_time = 0
                 self.playing_shieldrefill = False
                 self.playing_shieldlow = False
-
-        if self.rect.top == 570 and fuel < 200:
+        
+        if self.usefuel == True:
+            self.run_fuel = False
+            self.passed_fueltime = 0
+        print(self.usefuel)
+        if self.rect.top == 570 and fuel < 200 and self.usefuel == False:
             self.run_fuel = True
             print(self.passed_fueltime)
             if fuel < 200:
@@ -466,7 +468,6 @@ class Player(pygame.sprite.Sprite):
                     if fuel >= 200:
                         self.passed_fueltime = 0
                         self.run_fuel = False
-                    
                     if self.endurance < 100:
                         self.endurance += 0.1
                         #print(self.endurance)
@@ -475,7 +476,7 @@ class Player(pygame.sprite.Sprite):
   
 
     def flamethrower(self):
-            if self.rect.top == 570:
+            # if self.rect.top == 570:
                 if facing == "R":
                     self.images.clear()
                     for i in range(2):
@@ -494,6 +495,7 @@ class Player(pygame.sprite.Sprite):
                 self.rect.left = posy
                 self.rect.top = posx
                 self.flames_on = True
+                
                 # flamethrower_is_active = True
                 
            
@@ -920,6 +922,7 @@ class Game(object):
         if leftclick == True:
             if fuel >= 5:
                     fuel = fuel - 5
+                    self.usefuel = True
                     Player.flamethrower(self.player)
                     if self.flames_on == False:
                         self.flames.add(Flame("bullet0.png"))
@@ -927,6 +930,9 @@ class Game(object):
 
         else:
             self.flames_on = False
+            self.usefuel = False #work in progress
+            print(self.usefuel)
+            print(self.flames_on)
             self.player.flames_on = False
             for f in self.flames:
                 f.kill()
