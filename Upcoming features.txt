@@ -1,0 +1,6 @@
+PVP Modus
+Titelbildschirm
+Pausebildschirm
+Keybindings selber einstellen
+Sidescrolling nach meterscore
+Refill System verbessern

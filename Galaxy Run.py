@@ -1,3 +1,4 @@
+from datetime import datetime
 import pygame
 import os
 from random import randint
@@ -69,18 +70,18 @@ mixer.music.play()
 
 class Background():
     def __init__(self, filename):
-        self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert()
+        self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.rectimg = self.image.get_rect()
 
         self.bgx = 0
          
-    def scroll_r(self):
-        self.bgx = self.bgx - 5
+    def scroll_r(self, scrollspeed):
+        self.bgx = self.bgx - scrollspeed
         if self.bgx <= -Settings.window_width:
             self.bgx = 0
 
-    def scroll_l(self):
-        self.bgx = self.bgx + 5
+    def scroll_l(self, scrollspeed):
+        self.bgx = self.bgx + scrollspeed
         if self.bgx >= Settings.window_width:
             self.bgx = 0
              
@@ -156,7 +157,7 @@ class Stormbie(pygame.sprite.Sprite):
         if self.rect.left >= posy: #Settings.window_width:
                 self.speed_h = -2
                 self.facing = "L"
-                print("!!1")
+               
 
 
 class Stormtrooper(pygame.sprite.Sprite):
@@ -293,7 +294,6 @@ class Player(pygame.sprite.Sprite):
             if pygame.time.get_ticks() > self.clock_time:
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
                 self.imageindex += 1
-
                 if self.imageindex >= len(self.images):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
@@ -312,7 +312,7 @@ class Player(pygame.sprite.Sprite):
             self.sprinting = False
             self.speed = 5
             self.score_muliplier = 0.1
-        print(self.speed)
+        
 
     def pos(self):                              #Gibt die Startposition an 
         self.rect.left = 50
@@ -331,7 +331,7 @@ class Player(pygame.sprite.Sprite):
             if lives > 0:
                 score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
             facing = "L"
-            if self.shield == False and self.flames_on == False and self.sprinting == False:
+            if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
                 self.images.clear()
                 for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
@@ -344,9 +344,6 @@ class Player(pygame.sprite.Sprite):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_sprinting_L{i}.png"))
                     self.images.append(bitmap)
-
-
-            
 
 
     def moveR(self):
@@ -370,7 +367,7 @@ class Player(pygame.sprite.Sprite):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_sprinting_R{i}.png"))
                     self.images.append(bitmap)
-            print(self.speed)
+            
 
         
 
@@ -416,8 +413,8 @@ class Player(pygame.sprite.Sprite):
         if self.shieldpoints > 0:
             self.shieldpoints = self.shieldpoints - 0.25
             self.shield = True
-            print("Shield is active")
-            print(self.shieldpoints)
+         
+       
             self.images.clear()
             for i in range(16):
                 bitmap = pygame.image.load(os.path.join(
@@ -437,13 +434,17 @@ class Player(pygame.sprite.Sprite):
         global endurance
         Game.invtimer(self)
         
+        self.datetime = datetime.now()
+
+
+
         if self.shieldpoints <= 0:
             if self.playing_shieldlow == False:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'shields_low.mp3')))
                 self.playing_shieldlow = True
             Game.timer(self)
         if self.passed_time >= 420:
-            print(self.passed_time)
+            
             if self.playing_shieldrefill == False:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'refill.mp3')))
                 self.playing_shieldrefill = True
@@ -456,7 +457,7 @@ class Player(pygame.sprite.Sprite):
         if self.usefuel == True:
             self.run_fuel = False
             self.passed_fueltime = 0
-        print(self.usefuel)
+       
         if self.rect.top == 570 and fuel < 200: #and #self.usefuel == False:
         #    self.run_fuel = True
          #   print(self.passed_fueltime)
@@ -474,7 +475,7 @@ class Player(pygame.sprite.Sprite):
                  
   
 
-    def flamethrower(self):
+    def flamethrower_on(self):
             # if self.rect.top == 570:
                 if facing == "R":
                     self.images.clear()
@@ -494,16 +495,21 @@ class Player(pygame.sprite.Sprite):
                 self.rect.left = posy
                 self.rect.top = posx
                 self.flames_on = True
+    
+    def flamethrower_off(self):
+        self.flames_on = False
                 
-                # flamethrower_is_active = True
-                
-           
+       
         
     def jump(self):
         global jumping, endurance
         if jumping == True:
-            self.images.clear()
-            self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jump.png")))
+            if self.flames_on == False:
+                self.images.clear()
+                if facing == "R":
+                    self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jumpR.png")))
+                if facing == "L":
+                    self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jumpL.png")))
             self.rect.top += self.velocity[self.velocity_index]
             self.velocity_index += 1
             if self.velocity_index >= len(self.velocity) -1:
@@ -718,14 +724,18 @@ class tkprojectile(pygame.sprite.Sprite):
 
 
                 
-class Game(object):
+class Game(object): 
     def __init__(self) -> None:
         super().__init__()
         pygame.init()
         self.screen = pygame.display.set_mode((Settings.window_width, Settings.window_height))
         pygame.display.set_caption(Settings.title)
         self.clock = pygame.time.Clock()
-        self.background = Background("background.png")
+        self.background0 = Background("0.png")
+        self.background1 = Background("1.png")
+        self.background2 = Background("2.png")
+        self.background3 = Background("3.png")
+        self.background4 = Background("4.png")
         self.stormtroopers = pygame.sprite.Group()
         self.player = Player("player_standing_R0.png")
         self.tkprojectiles = pygame.sprite.Group()
@@ -734,9 +744,11 @@ class Game(object):
         self.healthpacks= pygame.sprite.Group()
         self.stormbies = pygame.sprite.Group()
         self.flames = pygame.sprite.Group()
+        self.flames_on = False
         self.sector = 0
         self.running = True
         self.length = 75
+        self.game_started = False
 
     def sector_up(self):
         global score_value
@@ -924,22 +936,21 @@ class Game(object):
             if fuel >= 5:
                     fuel = fuel - 5
                     self.usefuel = True
-                    Player.flamethrower(self.player)
+                    Player.flamethrower_on(self.player)
                     if self.flames_on == False:
                         self.flames.add(Flame("bullet0.png"))
                         self.flames_on = True
 
         else:
             self.flames_on = False
+            self.player.flamethrower_off()
             self.usefuel = False #work in progress
-            print(self.usefuel)
-            print(self.flames_on)
-            self.player.flames_on = False
+     
+            self.flames_on = False
             for f in self.flames:
                 f.kill()
             self.player.images.clear()
             if facing == "R":
-
                 for i in range(2):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_standing_R{i}.png"))
@@ -986,10 +997,19 @@ class Game(object):
             keys = pygame.key.get_pressed()
             if keys[pygame.K_a]: 
                 self.player.moveL()
-                self.background.scroll_l()
+                self.background0.scroll_l(5)
+                self.background1.scroll_l(4)
+                self.background2.scroll_l(3)
+                self.background3.scroll_l(2)
+                self.background4.scroll_l(1)
+
             if keys[pygame.K_d]:
                 self.player.moveR()
-                self.background.scroll_r()
+                self.background0.scroll_r(5)
+                self.background1.scroll_r(4)
+                self.background2.scroll_r(3)
+                self.background3.scroll_r(2)
+                self.background4.scroll_r(1)
             if keys[pygame.K_SPACE]:
                 jumping = True
             if keys[pygame.K_LSHIFT]:
@@ -997,8 +1017,6 @@ class Game(object):
                 self.player.sprint()
             else:
                 self.player.walk()
-
-               
             if keys[pygame.K_w]:
                 self.player.moveUp()
             if keys[pygame.K_r]:
@@ -1041,7 +1059,7 @@ class Game(object):
             print(timeformat, end='\r')
             time.sleep(1)
             time_sec -= 1
-        print("stop")
+   
 
  
 
@@ -1050,26 +1068,26 @@ class Game(object):
         for s in self.stormtroopers:
             if pygame.sprite.spritecollide(s, self.projectiles, True):
                 s.health = s.health - 25
-                if s.health ==0:
+                if s.health <=0:
                     s.kill()
                     self.reward()
     
             if pygame.sprite.spritecollide(s, self.flames, False):
                 s.health = s.health - 5
-                if s.health ==0:
+                if s.health <=0:
                     s.kill()
                     self.reward()
         
         for z in self.stormbies:
             if pygame.sprite.spritecollide(z, self.projectiles, True):
                 z.health = z.health - 25
-                if z.health ==0:
+                if z.health <=0:
                     z.kill()
                     self.reward()
 
             if pygame.sprite.spritecollide(z, self.flames, False):
                 z.health = z.health - 10
-                if z.health ==0:
+                if z.health <=0:
                     z.kill()
                     self.reward()
 
@@ -1095,7 +1113,7 @@ class Game(object):
 
             
     def reward(self):
-        dice6 = randint(1, 2)
+        dice6 = randint(1, 6)
                    
         if dice6 == 1:
             self.ammocrates.add(Pickups("ammocrate.png"))
@@ -1105,7 +1123,7 @@ class Game(object):
         elif dice6 == 3:
             pass
             #self.fuelpacks.add(Pickups("fuelpack.png"))
-            
+
 
     def pickup(self):
         if pygame.sprite.spritecollide(self.player, self.ammocrates, True):
@@ -1116,25 +1134,55 @@ class Game(object):
                 self.player.health = self.player.health + 1
        
 
+    def draw_start(self):
+        #self.screen.fill(BLACK)
+        
+        Titlefont = pygame.font.Font(None, 72)
+        self.background4.draw(self.screen)
+        self.background3.draw(self.screen)
+        self.background2.draw(self.screen)
+        self.background1.draw(self.screen)
+        self.background0.draw(self.screen)
+        Title = Titlefont.render("Galaxy Run", 1, (WHITE))
+        self.screen.blit(Title, (Settings.window_width // 2 - 150, Settings.window_height // 2 - 100))
+        pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2, 200, 100),)
+        self.background0.scroll_r(5)
+        self.background1.scroll_r(4)
+        self.background2.scroll_r(3)
+        self.background3.scroll_r(2)
+        self.background4.scroll_r(1)
 
+        pygame.display.flip()
 
-
-    def get_statement(self):
-        pass
+    def event_start(self):
+        mouse = pygame.mouse.get_pos()
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:    
+                        self.running = False
+                elif event.type == pygame.QUIT:         
+                    self.running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100:
+                    self.game_started = True
+                    print("Starting...")
 
 
     def run(self):
         while self.running:
             self.clock.tick(60)                         
-            self.watch_for_events()
-            self.update()
-            self.draw()
+            if self.game_started == True:
+                self.watch_for_events()
+                self.update()
+                self.draw()
+            else:
+                self.draw_start()
+                self.event_start()
         pygame.quit()       
 
     def watch_for_events(self):
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
-
                 self.midclick()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
@@ -1175,18 +1223,15 @@ class Game(object):
         self.sector_up()
         self.shoot_dice()
         
-        self.get_statement()
- 
-        
-        
-        
-        
-
 
         
 
     def draw(self):
-        self.background.draw(self.screen)
+        self.background4.draw(self.screen)
+        self.background3.draw(self.screen)
+        self.background2.draw(self.screen)
+        self.background1.draw(self.screen)
+        self.background0.draw(self.screen)
         self.stormtroopers.draw(self.screen)
         self.stormbies.draw(self.screen)
         self.player.draw(self.screen)
