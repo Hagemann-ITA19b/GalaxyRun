@@ -337,19 +337,19 @@ class Player(pygame.sprite.Sprite):
     def moveL(self):
         global facing, score_value
         Player.get_pos(self)
-        if self.rect.left > -75:                     #Macht die Border unpassierbar
+        if self.rect.left > 75:                     #Macht die Border unpassierbar
             self.rect.left = self.rect.left - self.speed
-            if lives > 0:
-                score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
+        if lives > 0:
+            score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
             facing = "L"
-            if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
+        if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
                 self.images.clear()
                 for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_walking_L{i}.png"))
                     self.images.append(bitmap)
 
-            if self.shield == False and self.flames_on == False and self.sprinting == True:
+        if self.shield == False and self.flames_on == False and self.sprinting == True:
                 self.images.clear()
                 for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
@@ -1080,6 +1080,8 @@ class Game(object):
             if keys[pygame.K_r]:
                 #self.reload()
                 self.restart()
+            if keys[pygame.K_p]:
+                self.game_started = False
         
     def restart(self):
         global bullets, fuel, score_value, lives, spawncount, count, level
