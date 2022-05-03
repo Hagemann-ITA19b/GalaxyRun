@@ -1,4 +1,5 @@
 from datetime import datetime
+from distutils.spawn import spawn
 import pygame
 import os
 from random import randint
@@ -91,8 +92,6 @@ class Background():
         screen.blit(self.image,(self.bgx+Settings.window_width,0))
 
 
-
-
 class Stormbie(pygame.sprite.Sprite):
     def __init__(self, filename,health, zposx, zposy):
         super().__init__()
@@ -157,6 +156,12 @@ class Stormbie(pygame.sprite.Sprite):
         if self.rect.left >= posy: #Settings.window_width:
                 self.speed_h = -2
                 self.facing = "L"
+
+    def playermove_R(self, speed):
+        self.rect.left -= speed
+
+    def playermove_L(self, speed):
+        self.rect.left += speed
                
 
 
@@ -199,11 +204,17 @@ class Stormtrooper(pygame.sprite.Sprite):
     def move(self):
         self.rect.left += self.speed_h
         self.rect.top += self.speed_v
-     
+
         if self.rect.left <= 0:
                 self.speed_h = 2
         if self.rect.left >= Settings.window_width:
                 self.speed_h = -2
+
+    def playermove_R(self, speed):
+        self.rect.left -= speed
+
+    def playermove_L(self, speed):
+        self.rect.left += speed
         
     def update(self):
         if self.rect.left <= posy:
@@ -234,7 +245,7 @@ class Stormtrooper(pygame.sprite.Sprite):
         
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, filename):
+    def __init__(self, filename, speed):
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.player_size)
@@ -269,7 +280,7 @@ class Player(pygame.sprite.Sprite):
                 self.images.append(bitmap)
 
 
-        self.speed = 5
+        self.speed = speed
         self.imageindex = 0
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
@@ -349,19 +360,19 @@ class Player(pygame.sprite.Sprite):
     def moveR(self):
         global facing, score_value, jumping
         Player.get_pos(self)
-        if self.rect.left < Settings.window_width - 50:    #Macht die Border unpassierbar
+        if self.rect.left < Settings.window_width // 2:#Settings.window_width - 50:    #Macht die Border unpassierbar
             self.rect.left = self.rect.left + self.speed
-            if self.health > 0:
-                score_value += self.score_muliplier#0.1
+        if self.health > 0:
+            score_value += self.score_muliplier#0.1
                 #Spieler wird nach rechts verschoben
             facing = "R" 
-            if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
-                self.images.clear()###
-                for i in range(7):
+        if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
+            self.images.clear()###
+            for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_walking_R{i}.png"))
                     self.images.append(bitmap)
-            if self.shield == False and self.flames_on == False and self.sprinting == True:
+        if self.shield == False and self.flames_on == False and self.sprinting == True:
                 self.images.clear()
                 for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
@@ -555,7 +566,11 @@ class Pickups(pygame.sprite.Sprite):
                 self.rect.top = self.platform_y
                 self.velocity_index = 0
 
-            
+    def playermove_R(self, speed):
+        self.rect.left -= speed
+
+    def playermove_L(self, speed):
+        self.rect.left += speed
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -721,6 +736,12 @@ class tkprojectile(pygame.sprite.Sprite):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
 
+    def playermove_R(self, speed):
+        self.rect.left -= speed
+
+    def playermove_L(self, speed):
+        self.rect.left += speed
+
 
 
                 
@@ -737,7 +758,7 @@ class Game(object):
         self.background3 = Background("3.png")
         self.background4 = Background("4.png")
         self.stormtroopers = pygame.sprite.Group()
-        self.player = Player("player_standing_R0.png")
+        self.player = Player("player_standing_R0.png", 5)
         self.tkprojectiles = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
         self.ammocrates = pygame.sprite.Group()
@@ -746,62 +767,75 @@ class Game(object):
         self.flames = pygame.sprite.Group()
         self.flames_on = False
         self.sector = 0
+        self.spawned = False
+        self.spawncount = 0
+        self.speed = 1
         self.running = True
         self.length = 75
         self.game_started = False
 
-    def sector_up(self):
-        global score_value
-        if self.player.rect.x >= 1550:
-            self.sector = self.sector + 1
-            self.player.rect.x = -10
-            self.player.rect.y = self.player.rect.y
+    # def sector_up(self):
+    #     global score_value
+    #     if self.player.rect.x >= 1550:
+    #         self.sector = self.sector + 1
+    #         self.player.rect.x = -10
+    #         self.player.rect.y = self.player.rect.y
             
-            for s in self.stormtroopers:
-                s.kill()
-            for a in self.ammocrates:
-                a.kill()
-            for h in self.healthpacks:
-                h.kill()
-            for b in self.stormbies:
-                b.kill()
-            for p in self.projectiles:
-                p.kill()
-            for t in self.tkprojectiles:
-                t.kill()
+    #         for s in self.stormtroopers:
+    #             s.kill()
+    #         for a in self.ammocrates:
+    #             a.kill()
+    #         for h in self.healthpacks:
+    #             h.kill()
+    #         for b in self.stormbies:
+    #             b.kill()
+    #         for p in self.projectiles:
+    #             p.kill()
+    #         for t in self.tkprojectiles:
+    #             t.kill()
             
-            self.spawn()
-        elif self.player.rect.x == -75:
-            self.sector = self.sector - 1
-            self.player.rect.x = 1550
-            self.player.rect.y = 570
+    #         self.spawn()
+    #     elif self.player.rect.x == -75:
+    #         self.sector = self.sector - 1
+    #         self.player.rect.x = 1550
+    #         self.player.rect.y = 570
            
+    #         self.spawn()
+    def sector_up(self):
             self.spawn()
+            if self.spawncount == 0:
+                self.spawned = False
 
     def spawn(self):
-        
-        if self.sector == 1:
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1000,570, randint(0, 100)))
-           
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1300,570, randint(0, 100)))
-            
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
-            
-        elif self.sector == 2:
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
+        global score_value
+        if self.spawned == False and score_value <= 10:
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
+            self.spawncount = self.spawncount + 3
+            self.spawned = True
+    
 
-        elif self.sector <= 4:
-            for i in range(randint(1, self.sector)):
-                self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
         
-        elif self.sector >= 5:
-            for i in range(randint(1, 10)):
-                self.stormbies.add(Stormbie("stormtrooperL0.png",100,randint(500, 1500),570))
-           
+
+        elif score_value == 200  and self.spawned == False:
+             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
+             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
+             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
+             self.spawned = True
+
+
+
+        #     self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
+        #     self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
+
+        # elif self.sector <= 4:
+        #     for i in range(randint(1, self.sector)):
+        #         self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
         
-            
-            
+        # elif self.sector >= 5:
+        #     for i in range(randint(1, 10)):
+        #         self.stormbies.add(Stormbie("stormtrooperL0.png",100,randint(500, 1500),570))
 
     def font(self):
         global bullets
@@ -994,22 +1028,46 @@ class Game(object):
 
     def controls(self):
             global jumping
+            if self.player.speed == 5:
+                self.player_speed = 1
+            elif self.player.speed == 10:
+                self.player_speed = 2
             keys = pygame.key.get_pressed()
             if keys[pygame.K_a]: 
                 self.player.moveL()
-                self.background0.scroll_l(5)
-                self.background1.scroll_l(4)
-                self.background2.scroll_l(3)
-                self.background3.scroll_l(2)
-                self.background4.scroll_l(1)
+                for s in self.stormtroopers:
+                    s.playermove_L(self.player.speed)
+                for z in self.stormbies:
+                    z.playermove_L(self.player.speed)
+                for a in self.ammocrates:
+                    a.playermove_L(self.player.speed)
+                for h in self.healthpacks:
+                    h.playermove_L(self.player.speed)
+                for tk in self.tkprojectiles:
+                    tk.playermove_L(self.player.speed)
+                self.background0.scroll_l(5 * self.player_speed)
+                self.background1.scroll_l(4 * self.player_speed)
+                self.background2.scroll_l(3 * self.player_speed)
+                self.background3.scroll_l(2 * self.player_speed)
+                self.background4.scroll_l(1 * self.player_speed)
 
             if keys[pygame.K_d]:
                 self.player.moveR()
-                self.background0.scroll_r(5)
-                self.background1.scroll_r(4)
-                self.background2.scroll_r(3)
-                self.background3.scroll_r(2)
-                self.background4.scroll_r(1)
+                for s in self.stormtroopers:
+                    s.playermove_R(self.player.speed)
+                for z in self.stormbies:
+                    z.playermove_R(self.player.speed)
+                for a in self.ammocrates:
+                    a.playermove_R(self.player.speed)
+                for h in self.healthpacks:
+                    h.playermove_R(self.player.speed)
+                for tk in self.tkprojectiles:
+                    tk.playermove_R(self.player.speed)
+                self.background0.scroll_r(5 * self.player_speed)
+                self.background1.scroll_r(4 * self.player_speed)
+                self.background2.scroll_r(3 * self.player_speed)
+                self.background3.scroll_r(2 * self.player_speed)
+                self.background4.scroll_r(1 * self.player_speed)
             if keys[pygame.K_SPACE]:
                 jumping = True
             if keys[pygame.K_LSHIFT]:
@@ -1043,7 +1101,7 @@ class Game(object):
         score_value = 0
         self.player.shieldpoints = 75
         self.player.endurance = 100
-        
+        self.spawned == False
         bullets = 20
         fuel = 200
         self.player.health = 3
@@ -1070,7 +1128,11 @@ class Game(object):
                 s.health = s.health - 25
                 if s.health <=0:
                     s.kill()
+                    
+                    self.spawncount = self.spawncount - 1
                     self.reward()
+                    print(self.spawncount)
+                    print(self.spawned)
     
             if pygame.sprite.spritecollide(s, self.flames, False):
                 s.health = s.health - 5
@@ -1135,8 +1197,7 @@ class Game(object):
        
 
     def draw_start(self):
-        #self.screen.fill(BLACK)
-        
+
         Titlefont = pygame.font.Font(None, 72)
         self.background4.draw(self.screen)
         self.background3.draw(self.screen)
