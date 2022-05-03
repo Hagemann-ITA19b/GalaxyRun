@@ -47,7 +47,6 @@ class Settings(object):
     stormtrooper_size = (70,150)
     title = "Galaxy Run"
 
-
 # Musik
 
 mixer.init()
@@ -240,7 +239,7 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, Settings.player_size)
         self.rect = self.image.get_rect()
         Player.pos(self)
-        self.health = 33
+        self.health = 3
         self.shield = False
         self.sprinting = False
         self.flames_on = False
@@ -351,15 +350,15 @@ class Player(pygame.sprite.Sprite):
 
 
     def moveR(self):
-        global facing, score_value
+        global facing, score_value, jumping
         Player.get_pos(self)
         if self.rect.left < Settings.window_width - 50:    #Macht die Border unpassierbar
             self.rect.left = self.rect.left + self.speed
             if self.health > 0:
                 score_value += self.score_muliplier#0.1
                 #Spieler wird nach rechts verschoben
-            facing = "R"
-            if self.shield == False and self.flames_on == False and self.sprinting == False:
+            facing = "R" 
+            if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
                 self.images.clear()###
                 for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
@@ -458,18 +457,18 @@ class Player(pygame.sprite.Sprite):
             self.run_fuel = False
             self.passed_fueltime = 0
         print(self.usefuel)
-        if self.rect.top == 570 and fuel < 200 and self.usefuel == False:
-            self.run_fuel = True
-            print(self.passed_fueltime)
-            if fuel < 200:
-                Game.fueltimer(self)
-                if self.passed_fueltime >= 300:
+        if self.rect.top == 570 and fuel < 200: #and #self.usefuel == False:
+        #    self.run_fuel = True
+         #   print(self.passed_fueltime)
+          #  if fuel < 200:
+           #     Game.fueltimer(self)
+            #    if self.passed_fueltime >= 300:
                     fuel += 0.4
-                    if fuel >= 200:
-                        self.passed_fueltime = 0
-                        self.run_fuel = False
-                    if self.endurance < 100:
-                        self.endurance += 0.1
+              #      if fuel >= 200:
+               #         self.passed_fueltime = 0
+                #        self.run_fuel = False
+        if self.endurance < 100:
+                        self.endurance += 1
                         #print(self.endurance)
 
                  
@@ -503,6 +502,8 @@ class Player(pygame.sprite.Sprite):
     def jump(self):
         global jumping, endurance
         if jumping == True:
+            self.images.clear()
+            self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jump.png")))
             self.rect.top += self.velocity[self.velocity_index]
             self.velocity_index += 1
             if self.velocity_index >= len(self.velocity) -1:
@@ -768,7 +769,7 @@ class Game(object):
     def spawn(self):
         
         if self.sector == 1:
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.PNG",100,1000,570, randint(0, 100)))
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1000,570, randint(0, 100)))
            
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1300,570, randint(0, 100)))
             
