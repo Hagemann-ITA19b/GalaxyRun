@@ -242,7 +242,7 @@ class Stormtrooper(pygame.sprite.Sprite):
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
-        
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, filename, speed):
@@ -337,7 +337,8 @@ class Player(pygame.sprite.Sprite):
     def moveL(self):
         global facing, score_value
         Player.get_pos(self)
-        if self.rect.left > 75:                     #Macht die Border unpassierbar
+        # if self.rect.left > 75:
+        if score_value < 16:                     #Macht die Border unpassierbar
             self.rect.left = self.rect.left - self.speed
         if lives > 0:
             score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
@@ -531,6 +532,27 @@ class Player(pygame.sprite.Sprite):
                 if self.rect.top == 570:
                     jumping = False
         Player.get_pos(self)
+
+class Platform(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height):
+        super().__init__()
+        self.image = pygame.Surface([width, height])
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.width = width
+        self.height = height
+
+
+        
+
+    def playermove_R(self, speed):
+            self.rect.left -= speed
+
+    def playermove_L(self, speed):
+            self.rect.left += speed
+
 
 
 class Pickups(pygame.sprite.Sprite):
@@ -765,6 +787,7 @@ class Game(object):
         self.healthpacks= pygame.sprite.Group()
         self.stormbies = pygame.sprite.Group()
         self.flames = pygame.sprite.Group()
+        self.platforms = pygame.sprite.Group()
         self.flames_on = False
         self.sector = 0
         self.spawned = False
@@ -812,6 +835,7 @@ class Game(object):
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
+            self.platforms.add(Platform(1000, 400,300, 100))
             self.spawncount = self.spawncount + 3
             self.spawned = True
     
@@ -1045,6 +1069,8 @@ class Game(object):
                     h.playermove_L(self.player.speed)
                 for tk in self.tkprojectiles:
                     tk.playermove_L(self.player.speed)
+                for p in self.platforms:
+                    p.playermove_L(self.player.speed)
                 self.background0.scroll_l(5 * self.player_speed)
                 self.background1.scroll_l(4 * self.player_speed)
                 self.background2.scroll_l(3 * self.player_speed)
@@ -1063,6 +1089,8 @@ class Game(object):
                     h.playermove_R(self.player.speed)
                 for tk in self.tkprojectiles:
                     tk.playermove_R(self.player.speed)
+                for p in self.platforms:
+                    p.playermove_R(self.player.speed)
                 self.background0.scroll_r(5 * self.player_speed)
                 self.background1.scroll_r(4 * self.player_speed)
                 self.background2.scroll_r(3 * self.player_speed)
@@ -1111,6 +1139,25 @@ class Game(object):
         self.player.rect.x = 50
         self.player.rect.y = 570
         pygame.mixer.music.rewind()
+
+
+    def collide(self):
+        for pt in self.platforms:
+            if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
+                if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                    self.player.rect.bottom = pt.rect.top
+                    self.player.on_ground = True
+            if self.player.rect.top <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
+                if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                    self.player.rect.top = pt.rect.bottom
+                    # self.player.on_ground = True
+            if self.player.rect.left <= pt.rect.right and self.player.rect.right >= pt.rect.left:
+                if self.player.rect.bottom >= pt.rect.top and self.player.rect.top <= pt.rect.bottom:
+                    self.player.rect.left = pt.rect.right
+            if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                if self.player.rect.bottom >= pt.rect.top and self.player.rect.top <= pt.rect.bottom:
+                    self.player.rect.right = pt.rect.left
+
        
     def countdown(time_sec): #FÜR SPÄTER
         while time_sec:
@@ -1174,6 +1221,10 @@ class Game(object):
                     self.player.get_invincible()
                     self.player.health = self.player.health - 1
                     pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'hurt.wav')))
+    
+
+
+
 
             
     def reward(self):
@@ -1277,17 +1328,18 @@ class Game(object):
         for f in self.flames:
             f.animate()
         
+        self.collide()
         self.leftclick()
         self.ammocrates.update()
         self.healthpacks.update()
         Game.pickup(self)
         Game.get_pos(self)
+      
         self.player.jump()
         self.sector_up()
         self.shoot_dice()
-        
 
-        
+
 
     def draw(self):
         self.background4.draw(self.screen)
@@ -1303,6 +1355,7 @@ class Game(object):
         self.ammocrates.draw(self.screen)
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
+        self.platforms.draw(self.screen)
         
         self.font()
         pygame.display.flip()
