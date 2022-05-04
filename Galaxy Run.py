@@ -245,7 +245,7 @@ class Stormtrooper(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, filename, speed):
+    def __init__(self, filename, speed, endurance):
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.player_size)
@@ -258,7 +258,7 @@ class Player(pygame.sprite.Sprite):
         self.shieldpoints = 75
         self.passed_time = 0
         self.passed_fueltime = 0
-        self.endurance = 100
+        self.endurance = endurance
         self.score_muliplier = 0.1
         self.playing_shieldrefill = False
         self.playing_shieldlow = False
@@ -411,13 +411,7 @@ class Player(pygame.sprite.Sprite):
                         pygame.mixer.pause()
 
                        
-    def gravity(self):
-        if jumping == False:
-            Player.get_pos(self)
-            self.rect.top += 10
 
-            if self.rect.top >= 570:
-                self.rect.top = 570
             
 
 
@@ -515,6 +509,7 @@ class Player(pygame.sprite.Sprite):
         
     def jump(self):
         global jumping, endurance
+        
         if jumping == True:
             if self.flames_on == False:
                 self.images.clear()
@@ -522,6 +517,7 @@ class Player(pygame.sprite.Sprite):
                     self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jumpR.png")))
                 if facing == "L":
                     self.images.append(pygame.image.load(os.path.join(Settings.path_image,"jumpL.png")))
+            
             self.rect.top += self.velocity[self.velocity_index]
             self.velocity_index += 1
             if self.velocity_index >= len(self.velocity) -1:
@@ -531,6 +527,7 @@ class Player(pygame.sprite.Sprite):
                 self.velocity_index = 0
                 if self.rect.top == self.platform_y:
                     jumping = False
+                    
         Player.get_pos(self)
 
 class Platform(pygame.sprite.Sprite):
@@ -780,7 +777,7 @@ class Game(object):
         self.background3 = Background("3.png")
         self.background4 = Background("4.png")
         self.stormtroopers = pygame.sprite.Group()
-        self.player = Player("player_standing_R0.png", 5)
+        self.player = Player("player_standing_R0.png", 5, 100)
         self.tkprojectiles = pygame.sprite.Group()
         self.projectiles = pygame.sprite.Group()
         self.ammocrates = pygame.sprite.Group()
@@ -832,9 +829,9 @@ class Game(object):
     def spawn(self):
         global score_value
         if self.spawned == False and score_value <= 10:
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,660,400, randint(0, 100)))
+            #self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
+            #self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
             self.platforms.add(Platform(1000, 660,300, 10))
             self.platforms.add(Platform(1400, 560,300, 10))
             self.platforms.add(Platform(0, 710,1600, 10))
@@ -842,8 +839,6 @@ class Game(object):
             self.spawncount = self.spawncount + 3
             self.spawned = True
     
-
-        
 
         elif score_value == 200  and self.spawned == False:
              self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
@@ -958,6 +953,7 @@ class Game(object):
 
 
     def get_pos(self):
+        global posx, posy
         for s in self.stormtroopers:
             s.tkposx = s.rect.left
             s.tkposy = s.rect.top
@@ -965,6 +961,10 @@ class Game(object):
         for z in self.stormbies:
             z.zposx = z.rect.left
             z.zposy = z.rect.top
+
+        
+        posy = self.player.rect.left
+        posx = self.player.rect.top
 
     def shoot(self):
             global bullets
@@ -1099,8 +1099,11 @@ class Game(object):
                 self.background2.scroll_r(3 * self.player_speed)
                 self.background3.scroll_r(2 * self.player_speed)
                 self.background4.scroll_r(1 * self.player_speed)
-            if keys[pygame.K_SPACE]:
-                jumping = True
+            # if keys[pygame.K_SPACE]:
+            #     if self.player.endurance > 50:
+                    
+            #         print(self.player.endurance)
+            #         jumping = True
             if keys[pygame.K_LSHIFT]:
                 self.player.sprinting = True
                 self.player.sprint()
@@ -1146,7 +1149,7 @@ class Game(object):
 
     def collide(self):
         for pt in self.platforms:
-            print(self.player.platform_y)
+           
             if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
                 if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
                     self.player.platform_y = pt.rect.top - 150
@@ -1165,7 +1168,7 @@ class Game(object):
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
                         s.platform_y = pt.rect.top - 150
                         s.rect.bottom = pt.rect.top
-                    
+
                 if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
                         s.rect.top = pt.rect.bottom           
@@ -1183,6 +1186,14 @@ class Game(object):
             print(timeformat, end='\r')
             time.sleep(1)
             time_sec -= 1
+
+    def gravity(self):
+        if jumping == False:
+            self.get_pos()
+            self.player.rect.top += 10
+
+            if self.player.rect.top >= 570:
+                self.player.rect.top = 570
    
 
  
@@ -1312,12 +1323,15 @@ class Game(object):
         pygame.quit()       
 
     def watch_for_events(self):
+        global jumping
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.midclick()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
                     self.running = False
+                if event.key == pygame.K_SPACE:
+                    jumping = True
             elif event.type == pygame.QUIT:         
                 self.running = False
 
@@ -1329,7 +1343,7 @@ class Game(object):
         self.projectiles.update()
         self.tkprojectiles.update()
         Game.controls(self)
-        Player.gravity(self.player)
+        
         Player.refill(self.player)
         Game.hit(self)
         Player.animate(self.player)
@@ -1344,7 +1358,7 @@ class Game(object):
             z.animate()
         for f in self.flames:
             f.animate()
-        
+        self.gravity()
         self.collide()
         self.leftclick()
         self.ammocrates.update()

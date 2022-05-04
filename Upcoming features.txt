@@ -1,6 +1,6 @@
-PVP Modus
-Titelbildschirm
-Pausebildschirm
-Keybindings selber einstellen
-Sidescrolling nach meterscore
-Refill System verbessern
+PVP Modus x
+Titelbildschirm -
+Pausebildschirm -
+Keybindings selber einstellen x
+Sidescrolling nach meterscore -
+Refill System verbessern x
