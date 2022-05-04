@@ -529,7 +529,7 @@ class Player(pygame.sprite.Sprite):
             if self.rect.top >= self.platform_y:
                 self.rect.top = self.platform_y
                 self.velocity_index = 0
-                if self.rect.top == 570:
+                if self.rect.top == self.platform_y:
                     jumping = False
         Player.get_pos(self)
 
@@ -835,7 +835,10 @@ class Game(object):
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
-            self.platforms.add(Platform(1000, 400,300, 100))
+            self.platforms.add(Platform(1000, 660,300, 10))
+            self.platforms.add(Platform(1400, 560,300, 10))
+            self.platforms.add(Platform(0, 710,1600, 10))
+  
             self.spawncount = self.spawncount + 3
             self.spawned = True
     
@@ -1143,20 +1146,34 @@ class Game(object):
 
     def collide(self):
         for pt in self.platforms:
+            print(self.player.platform_y)
             if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
-                if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                    self.player.platform_y = pt.rect.top - 150
                     self.player.rect.bottom = pt.rect.top
                     self.player.on_ground = True
-            if self.player.rect.top <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
-                if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+                else:
+                    self.player.platform_y = 570
+
+            if self.player.rect.top  <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
+                if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
                     self.player.rect.top = pt.rect.bottom
-                    # self.player.on_ground = True
-            if self.player.rect.left <= pt.rect.right and self.player.rect.right >= pt.rect.left:
-                if self.player.rect.bottom >= pt.rect.top and self.player.rect.top <= pt.rect.bottom:
-                    self.player.rect.left = pt.rect.right
-            if self.player.rect.right >= pt.rect.left and self.player.rect.left <= pt.rect.right:
-                if self.player.rect.bottom >= pt.rect.top and self.player.rect.top <= pt.rect.bottom:
-                    self.player.rect.right = pt.rect.left
+                    self.player.on_ground = True
+
+            for s in self.stormtroopers:
+                if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
+                    if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
+                        s.platform_y = pt.rect.top - 150
+                        s.rect.bottom = pt.rect.top
+                    
+                if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
+                    if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
+                        s.rect.top = pt.rect.bottom           
+
+    
+
+                    
+
 
        
     def countdown(time_sec): #FÜR SPÄTER
@@ -1347,6 +1364,7 @@ class Game(object):
         self.background2.draw(self.screen)
         self.background1.draw(self.screen)
         self.background0.draw(self.screen)
+        self.platforms.draw(self.screen)
         self.stormtroopers.draw(self.screen)
         self.stormbies.draw(self.screen)
         self.player.draw(self.screen)
@@ -1355,7 +1373,7 @@ class Game(object):
         self.ammocrates.draw(self.screen)
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
-        self.platforms.draw(self.screen)
+        
         
         self.font()
         pygame.display.flip()
