@@ -180,7 +180,7 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.trigger = trigger
         self.rect.left = self.tkposx#randint(300, Settings.window_width)
         self.rect.top = self.tkposy #570
-        self.speed_h = randint( 1, 3)
+        self.speed_h = 0#randint( 1, 3)
         self.speed_v = 0
         self.health = health
         self.images = []
@@ -193,7 +193,8 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-        self.platfrom_y = 0
+        self.platfrom_x = 1110
+        self.platfrom_x_right = 1110
 
     def animate(self):
             if pygame.time.get_ticks() > self.clock_time:
@@ -209,11 +210,12 @@ class Stormtrooper(pygame.sprite.Sprite):
     def move(self):
         self.rect.left += self.speed_h
         self.rect.top += self.speed_v
+  
+        if self.rect.left > 0:
+            self.speed_h = 3
+        if self.rect.right < Settings.window_width:
+            self.speed_h = -3
 
-        if self.rect.left <= 0:
-                self.speed_h = 2
-        if self.rect.left >= Settings.window_width:
-                self.speed_h = -2
 
     def playermove_R(self, speed):
         self.rect.left -= speed
@@ -1137,7 +1139,8 @@ class Game(object):
 
     def collide(self):
         for pt in self.platforms:
-           
+
+
             if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
                 if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
                     self.player.platform_y = pt.rect.top - 150
@@ -1151,17 +1154,26 @@ class Game(object):
                     self.player.rect.top = pt.rect.bottom
                     self.player.on_ground = True
 
+
+
             for s in self.stormtroopers:
                 if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
-                    if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-                        s.platform_y = pt.rect.top - 150
-                        s.rect.bottom = pt.rect.top
-                    # else:
-                    #     s.platform_y = 570
+                        s.platform_x = pt.rect.left
+                        s.platfrom_x_right = pt.rect.right
+                        print(s.platform_x)
+                        if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
+                            s.rect.bottom = pt.rect.top
+                    
+                        # else:
+                        #     s.platform_y = 570
 
                 if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
                         s.rect.top = pt.rect.bottom
+           
+
+
+
 
 
             for z in self.stormbies:
