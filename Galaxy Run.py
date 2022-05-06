@@ -1,5 +1,6 @@
 from datetime import datetime
 from distutils.spawn import spawn
+from turtle import screensize
 import pygame
 import os
 from random import randint
@@ -47,6 +48,10 @@ class Settings(object):
     bullet_size = (100, 50)
     melee_size = (70, 70)
     stormtrooper_size = (70,150)
+    max_platforms = 1
+    current_platforms = 0
+    current_enemys = 0
+    max_enemys = 1
     title = "Galaxy Run"
 
 # Musik
@@ -73,7 +78,6 @@ class Background():
     def __init__(self, filename):
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.rectimg = self.image.get_rect()
-
         self.bgx = 0
          
     def scroll_r(self, scrollspeed):
@@ -189,6 +193,7 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
+        self.platfrom_y = 0
 
     def animate(self):
             if pygame.time.get_ticks() > self.clock_time:
@@ -285,8 +290,6 @@ class Player(pygame.sprite.Sprite):
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-
-
         self.platform_y = 570
         self.velocity_index = 0
         self.velocity = ([-10,-9.5,-9,-8.5,-8,-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10])
@@ -327,7 +330,7 @@ class Player(pygame.sprite.Sprite):
 
     def pos(self):                              #Gibt die Startposition an 
         self.rect.left = 50
-        self.rect.top = 570
+        self.rect.top = 399
     
     def get_pos(self):
         global posx, posy
@@ -380,8 +383,6 @@ class Player(pygame.sprite.Sprite):
                         Settings.path_image, f"player_sprinting_R{i}.png"))
                     self.images.append(bitmap)
             
-
-        
 
     def moveUp(self):
         global fuel
@@ -464,7 +465,7 @@ class Player(pygame.sprite.Sprite):
             self.run_fuel = False
             self.passed_fueltime = 0
        
-        if self.rect.top == 570 and fuel < 200: #and #self.usefuel == False:
+        if self.rect.top == self.platform_y and fuel < 200: #and #self.usefuel == False:
         #    self.run_fuel = True
          #   print(self.passed_fueltime)
           #  if fuel < 200:
@@ -821,43 +822,31 @@ class Game(object):
     #         self.player.rect.y = 570
            
     #         self.spawn()
+
+    def addplatform(self):
+        self.platforms.add(Platform(randint(1500,1800), randint(100, 700),randint(100,600), 10))
+
+
     def sector_up(self):
+        global score_value
+        self.spawncount = round(score_value)%10
+        if self.spawncount == 0:
             self.spawn()
-            if self.spawncount == 0:
-                self.spawned = False
+        if self.spawncount == 7:
+            Settings.current_platforms = 0
+            Settings.current_enemys = 0
+        if score_value <= 1:
+            self.platforms.add(Platform(10, 600,100, 10))
+           
 
     def spawn(self):
         global score_value
-        if self.spawned == False and score_value <= 10:
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,660,400, randint(0, 100)))
-            #self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
-            #self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
-            self.platforms.add(Platform(1000, 660,300, 10))
-            self.platforms.add(Platform(1400, 560,300, 10))
-            self.platforms.add(Platform(0, 710,1600, 10))
-  
-            self.spawncount = self.spawncount + 3
-            self.spawned = True
-    
-
-        elif score_value == 200  and self.spawned == False:
-             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,570, randint(0, 100)))
-             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1600,570, randint(0, 100)))
-             self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1800,570, randint(0, 100)))
-             self.spawned = True
-
-
-
-        #     self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
-        #     self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
-
-        # elif self.sector <= 4:
-        #     for i in range(randint(1, self.sector)):
-        #         self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1500,570, randint(0, 100)))
-        
-        # elif self.sector >= 5:
-        #     for i in range(randint(1, 10)):
-        #         self.stormbies.add(Stormbie("stormtrooperL0.png",100,randint(500, 1500),570))
+        if Settings.current_platforms < Settings.max_platforms:
+            Settings.current_platforms += 1
+            self.addplatform()
+        if Settings.current_enemys < Settings.max_enemys:
+            Settings.current_enemys += 1
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100)))
 
     def font(self):
         global bullets
@@ -1030,7 +1019,6 @@ class Game(object):
   
 
     def midclick(self):
-        
         midclick = pygame.mouse.get_pressed() == (0, 1, 0)
         rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
         if midclick == True:
@@ -1143,7 +1131,7 @@ class Game(object):
         self.player.health = 3
         self.sector = 0
         self.player.rect.x = 50
-        self.player.rect.y = 570
+        self.player.rect.y = 300
         pygame.mixer.music.rewind()
 
 
@@ -1155,8 +1143,8 @@ class Game(object):
                     self.player.platform_y = pt.rect.top - 150
                     self.player.rect.bottom = pt.rect.top
                     self.player.on_ground = True
-                else:
-                    self.player.platform_y = 570
+                # else:
+                #     self.player.platform_y = 570
 
             if self.player.rect.top  <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
                 if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
@@ -1168,10 +1156,25 @@ class Game(object):
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
                         s.platform_y = pt.rect.top - 150
                         s.rect.bottom = pt.rect.top
+                    # else:
+                    #     s.platform_y = 570
 
                 if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-                        s.rect.top = pt.rect.bottom           
+                        s.rect.top = pt.rect.bottom
+
+
+            for z in self.stormbies:
+                if z.rect.bottom >= pt.rect.top and z.rect.bottom <= pt.rect.bottom:
+                    if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
+                        z.platform_y = pt.rect.top - 150
+                        z.rect.bottom = pt.rect.top
+
+                if z.rect.top  <= pt.rect.bottom and z.rect.top >= pt.rect.top:
+                    if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
+                        z.rect.top = pt.rect.bottom
+
+
 
     
 
@@ -1192,8 +1195,19 @@ class Game(object):
             self.get_pos()
             self.player.rect.top += 10
 
-            if self.player.rect.top >= 570:
-                self.player.rect.top = 570
+            if self.player.rect.top >= 7770:#570:
+                self.player.rect.top = 7770
+            
+        for s in self.stormtroopers:
+            s.rect.top += 10
+            if s.rect.top >= 570:
+                s.rect.top = 570
+
+        for z in self.stormbies:
+            z.rect.top += 10
+            if z.rect.top >= 570:
+                z.rect.top = 570
+
    
 
  
@@ -1205,17 +1219,24 @@ class Game(object):
                 s.health = s.health - 25
                 if s.health <=0:
                     s.kill()
-                    
                     self.spawncount = self.spawncount - 1
                     self.reward()
-                    print(self.spawncount)
-                    print(self.spawned)
+
+            if s.rect.top >= 570:
+                s.kill()
+   
+
+        
     
             if pygame.sprite.spritecollide(s, self.flames, False):
                 s.health = s.health - 5
                 if s.health <=0:
                     s.kill()
                     self.reward()
+
+        if self.player.rect.top >= 570:
+            self.player.kill()
+            self.player.health = self.player.health - 3
         
         for z in self.stormbies:
             if pygame.sprite.spritecollide(z, self.projectiles, True):
@@ -1242,6 +1263,8 @@ class Game(object):
                         self.player.kill()
                 if self.player.shield == True:
                         pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'darksaber.wav')))
+   
+
                 
         if pygame.sprite.spritecollide(self.player, self.stormbies, False):
                 self.player.invincible_off()
@@ -1249,12 +1272,8 @@ class Game(object):
                     self.player.get_invincible()
                     self.player.health = self.player.health - 1
                     pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'hurt.wav')))
+        
     
-
-
-
-
-            
     def reward(self):
         dice6 = randint(1, 6)
                    
@@ -1286,14 +1305,17 @@ class Game(object):
         self.background1.draw(self.screen)
         self.background0.draw(self.screen)
         Title = Titlefont.render("Galaxy Run", 1, (WHITE))
+        self.Startfont = pygame.font.Font(None, 39)
+        Start = self.Startfont.render("Start Adventure", 1, (WHITE))
+        
         self.screen.blit(Title, (Settings.window_width // 2 - 150, Settings.window_height // 2 - 100))
-        pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2, 200, 100),)
+        #pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2 , 200, 100),)
+        self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
         self.background0.scroll_r(5)
         self.background1.scroll_r(4)
         self.background2.scroll_r(3)
         self.background3.scroll_r(2)
         self.background4.scroll_r(1)
-
         pygame.display.flip()
 
     def event_start(self):
@@ -1308,6 +1330,13 @@ class Game(object):
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100:
                     self.game_started = True
                     print("Starting...")
+        if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100: #bugged
+                pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2 , 200, 100),)
+                self.Startfont = pygame.font.Font(None, 100)
+                Start = self.Startfont.render("Start Adventure", 1, (BLACK))
+                self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
+                pygame.display.flip()
+                
 
 
     def run(self):
@@ -1337,13 +1366,11 @@ class Game(object):
 
 
     def update(self):
-        # self.background.update()
         self.stormtroopers.update()
         self.stormbies.update()
         self.projectiles.update()
         self.tkprojectiles.update()
         Game.controls(self)
-        
         Player.refill(self.player)
         Game.hit(self)
         Player.animate(self.player)
@@ -1365,7 +1392,6 @@ class Game(object):
         self.healthpacks.update()
         Game.pickup(self)
         Game.get_pos(self)
-      
         self.player.jump()
         self.sector_up()
         self.shoot_dice()
