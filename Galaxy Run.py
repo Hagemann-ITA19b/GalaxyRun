@@ -391,7 +391,7 @@ class Player(pygame.sprite.Sprite):
             pygame.mixer.unpause()
             jetpack_sound.play()
             if self.rect.top <= 570: 
-                if self.rect.top >= 1:
+                # if self.rect.top >= 1:
                     self.rect.top = self.rect.top - 13
                     self.in_air = True
                     self.images.clear()
@@ -983,8 +983,9 @@ class Game(object):
         rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
         
         if leftclick == True:
-            if fuel >= 5:
-                    fuel = fuel - 5
+            if self.player.shieldpoints >= 1:#fuel >= 5:
+                    #fuel = fuel - 5
+                    self.player.shieldpoints = self.player.shieldpoints - 1
                     self.usefuel = True
                     Player.flamethrower_on(self.player)
                     if self.flames_on == False:
@@ -995,7 +996,7 @@ class Game(object):
             self.flames_on = False
             self.player.flamethrower_off()
             self.usefuel = False #work in progress
-     
+        
             self.flames_on = False
             for f in self.flames:
                 f.kill()
@@ -1005,7 +1006,7 @@ class Game(object):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_standing_R{i}.png"))
                     self.player.images.append(bitmap)
-              
+                
             if facing == "L":
                 for i in range(2):
                     bitmap = pygame.image.load(os.path.join(
