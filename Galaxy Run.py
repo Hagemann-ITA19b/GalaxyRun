@@ -983,14 +983,13 @@ class Game(object):
         rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
         
         if leftclick == True:
-            if self.player.shieldpoints >= 1:#fuel >= 5:
-                    #fuel = fuel - 5
-                    self.player.shieldpoints = self.player.shieldpoints - 1
-                    self.usefuel = True
-                    Player.flamethrower_on(self.player)
-                    if self.flames_on == False:
-                        self.flames.add(Flame("bullet0.png"))
-                        self.flames_on = True
+            if self.player.shieldpoints > 0:
+                self.player.shieldpoints = self.player.shieldpoints - 0.25
+                self.usefuel = True
+                Player.flamethrower_on(self.player)
+                if self.flames_on == False:
+                    self.flames.add(Flame("bullet0.png"))
+                    self.flames_on = True
 
         else:
             self.flames_on = False
@@ -1122,6 +1121,8 @@ class Game(object):
             f.kill()
         for z in self.stormbies:
             z.kill()
+        for pt in self.platforms:
+            pt.kill()
         level = 1
         score_value = 0
         self.player.shieldpoints = 75
