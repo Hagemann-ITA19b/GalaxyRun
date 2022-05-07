@@ -246,7 +246,7 @@ class Stormtrooper(pygame.sprite.Sprite):
                 self.images.append(bitmap)
 
 
-        self.move()
+        #self.move()
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -672,16 +672,17 @@ class projectile(pygame.sprite.Sprite):
         self.rect.top = posx + 50
         x = self.rect.left
         y = self.rect.top
-        angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
-        print('Angle in degrees:', int(angle*180/math.pi))
-        self.dx = math.cos(angle) * 30
-        self.dy = math.sin(angle) * 30
+        self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
+        print('Angle in degrees:', int(self.angle*180/math.pi))
+        self.dx = math.cos(self.angle) * 30
+        self.dy = math.sin(self.angle) * 30
         self.speed_h = 10
         self.speed_v = 0
         self.x = x
         self.y = y
         # self.facing = facing
         # self.faced = False
+        self.rotated_image = pygame.transform.rotate(self.image, int(self.angle*180/math.pi))
 
         self.images = []
         # if facing == "R":
@@ -701,13 +702,17 @@ class projectile(pygame.sprite.Sprite):
         self.animation_time = 100
 
     def animate(self):
+
             if pygame.time.get_ticks() > self.clock_time:
+                
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
                 self.imageindex += 1
-
                 if self.imageindex >= len(self.images):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
+
+
+
 
     def move(self):
         self.x = self.x + self.dx
@@ -1371,7 +1376,7 @@ class Game(object):
                 self.watch_for_events()
                 self.update()
                 self.draw()
-                self.change_cursor()
+                self.get_cursor_center()
             else:
                 self.draw_start()
                 self.event_start()
@@ -1393,9 +1398,13 @@ class Game(object):
             elif event.type == pygame.QUIT:         
                 self.running = False
         
-    def change_cursor(self):
+    def get_cursor_center(self):
+        global facing
         self.cursor_rect.center = pygame.mouse.get_pos()
-        
+        if self.cursor_rect.center[0] < self.player.rect.center[0]:
+            facing = "L"
+        elif self.cursor_rect.center[0] > self.player.rect.center[0]:
+            facing = "R"
         
 
     def update(self):
