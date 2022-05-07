@@ -1,11 +1,14 @@
 from datetime import datetime
 from distutils.spawn import spawn
+from re import X
 from turtle import screensize
 import pygame
 import os
 from random import randint
 from pygame import mixer
 import time
+import sys
+import math
 
 #Parameter
 bullets = 20
@@ -52,6 +55,7 @@ class Settings(object):
     current_platforms = 0
     current_enemys = 0
     max_enemys = 1
+    
     title = "Galaxy Run"
 
 # Musik
@@ -659,29 +663,37 @@ class Flame(pygame.sprite.Sprite):
 
    
 class projectile(pygame.sprite.Sprite):
-    def __init__(self, filename, facing):
+    def __init__(self, filename, facing, dx, dy): #delta x and delta y
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.bullet_size)
         self.rect = self.image.get_rect()
         self.rect.left = posy + 70
         self.rect.top = posx + 50
+        x = self.rect.left
+        y = self.rect.top
+        angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
+        print('Angle in degrees:', int(angle*180/math.pi))
+        self.dx = math.cos(angle) * 30
+        self.dy = math.sin(angle) * 30
         self.speed_h = 10
         self.speed_v = 0
-        self.facing = facing
-        self.faced = False
+        self.x = x
+        self.y = y
+        # self.facing = facing
+        # self.faced = False
 
         self.images = []
-        if facing == "R":
-            for i in range(3):
-                bitmap = pygame.image.load(os.path.join(
-                    Settings.path_image, f"bullet{i}.png"))
-                self.images.append(bitmap)
-        if facing == "L":
-            for i in range(3):
-                bitmap = pygame.image.load(os.path.join(
-                    Settings.path_image, f"bulletL{i}.png"))
-                self.images.append(bitmap)
+        # if facing == "R":
+        for i in range(3):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"bullet{i}.png"))
+            self.images.append(bitmap)
+        # if facing == "L":
+        #     for i in range(3):
+        #         bitmap = pygame.image.load(os.path.join(
+        #             Settings.path_image, f"bulletL{i}.png"))
+        #         self.images.append(bitmap)
 
         self.imageindex = 0
         self.image = self.images[self.imageindex]
@@ -697,19 +709,24 @@ class projectile(pygame.sprite.Sprite):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
 
+    def move(self):
+        self.x = self.x + self.dx
+        self.y = self.y + self.dy
+        self.rect.x = int(self.x)
+        self.rect.y = int(self.y)
 
-    def update(self):
-        global facing
-        if self.facing == "R":
-            self.rect.move_ip(self.speed_h, self.speed_v)
-        if self.facing == "L":
-                projectile.change_direction_L(self)
-                self.rect.move_ip(-self.speed_h, self.speed_v)
+    # def update(self):
+    #     global facing
+    #     if self.facing == "R":
+    #         self.rect.move_ip(self.speed_h, self.speed_v)
+    #     if self.facing == "L":
+    #             projectile.change_direction_L(self)
+    #             self.rect.move_ip(-self.speed_h, self.speed_v)
         
-    def change_direction_L(self):
-        if facing == "L" and self.faced == False:
-            self.rect.left = posy - 75
-            self.faced = True
+    # def change_direction_L(self):
+    #     if facing == "L" and self.faced == False:
+    #         self.rect.left = posy - 75
+    #         self.faced = True
 
 class tkprojectile(pygame.sprite.Sprite):
     def __init__(self, filename, facing, x, y):
@@ -772,6 +789,7 @@ class Game(object):
         self.screen = pygame.display.set_mode((Settings.window_width, Settings.window_height))
         pygame.display.set_caption(Settings.title)
         self.clock = pygame.time.Clock()
+        pygame.mouse.set_visible(False)
         self.background0 = Background("0.png")
         self.background1 = Background("1.png")
         self.background2 = Background("2.png")
@@ -794,6 +812,11 @@ class Game(object):
         self.running = True
         self.length = 75
         self.game_started = False
+        self.cursor = pygame.image.load(os.path.join(Settings.path_image, "crosshair.png")).convert_alpha()
+        self.cursor_rect = self.cursor.get_rect()
+        
+        
+
 
     # def sector_up(self):
     #     global score_value
@@ -960,7 +983,8 @@ class Game(object):
             Settings.bullet_size = (100, 15)
             if bullets >= 0.5:
                 bullets -= 1
-                self.projectiles.add(projectile("bullet0.png", facing))
+                self.projectiles.add(projectile("bullet0.png", facing,self.mx ,self.my))
+                print(self.mx, self.my)
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'blaster.wav')))
             else:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
@@ -1020,7 +1044,6 @@ class Game(object):
 
     def midclick(self):
         midclick = pygame.mouse.get_pressed() == (0, 1, 0)
-        rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
         if midclick == True:
             self.shoot()
   
@@ -1348,6 +1371,7 @@ class Game(object):
                 self.watch_for_events()
                 self.update()
                 self.draw()
+                self.change_cursor()
             else:
                 self.draw_start()
                 self.event_start()
@@ -1357,7 +1381,10 @@ class Game(object):
         global jumping
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
+                self.mx, self.my = pygame.mouse.get_pos()
+                print(self.mx, self.my)
                 self.midclick()
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
                     self.running = False
@@ -1365,7 +1392,11 @@ class Game(object):
                     jumping = True
             elif event.type == pygame.QUIT:         
                 self.running = False
-
+        
+    def change_cursor(self):
+        self.cursor_rect.center = pygame.mouse.get_pos()
+        
+        
 
     def update(self):
         self.stormtroopers.update()
@@ -1380,6 +1411,7 @@ class Game(object):
         for tk in self.tkprojectiles:
             tk.animate()
         for p in self.projectiles:
+            p.move()
             p.animate()
         for s in self.stormtroopers:
             s.animate()
@@ -1415,7 +1447,7 @@ class Game(object):
         self.ammocrates.draw(self.screen)
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
-        
+        self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
         
         self.font()
         pygame.display.flip()
