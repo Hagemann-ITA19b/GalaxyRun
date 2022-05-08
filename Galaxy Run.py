@@ -31,7 +31,7 @@ level = 0
 facing = "R"
 posx = 0
 posy = 0
-flamethrower_is_active = False
+
 BLACK = (0, 0, 0) 
 GRAY = (127, 127, 127) 
 WHITE = (255, 255, 255)
@@ -484,9 +484,6 @@ class Player(pygame.sprite.Sprite):
                         self.endurance += 1
                         #print(self.endurance)
 
-                 
-  
-
     def flamethrower_on(self):
         
                 if facing == "R":
@@ -668,10 +665,55 @@ class projectile(pygame.sprite.Sprite):
         self.speed_v = 0
         self.x = x
         self.y = y
-        self.rotated_image = pygame.transform.rotate(self.image, int(self.angle*180/math.pi))
 
         self.images = []
-        for i in range(3):
+        for i in range(4):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"bullet{i}.png"))
+            self.images.append(bitmap)
+
+
+        self.imageindex = 0
+        self.image = self.images[self.imageindex]
+        self.clock_time = pygame.time.get_ticks()
+        self.animation_time = 100
+
+    def animate(self):
+
+            if pygame.time.get_ticks() > self.clock_time:
+                
+                self.clock_time = pygame.time.get_ticks() + self.animation_time
+                self.imageindex += 1
+                if self.imageindex >= len(self.images):
+                    self.imageindex = 0
+                self.image = self.images[self.imageindex]
+
+    def move(self):
+        self.x = self.x + self.dx 
+        self.y = self.y + self.dy 
+        self.rect.x = int(self.x) 
+        self.rect.y = int(self.y) 
+
+class Rocket(pygame.sprite.Sprite):
+    def __init__(self, filename, dx, dy): #delta x and delta y
+        super().__init__()
+        self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
+        self.image = pygame.transform.scale(self.image, Settings.bullet_size)
+        self.rect = self.image.get_rect()
+        self.rect.left = posy + 70
+        self.rect.top = posx + 50
+        x = self.rect.left
+        y = self.rect.top
+        self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
+        print('Angle in degrees:', int(self.angle*180/math.pi))
+        self.dx = math.cos(self.angle) * 30
+        self.dy = math.sin(self.angle) * 30
+        self.speed_h = 10
+        self.speed_v = 0
+        self.x = x
+        self.y = y
+        self.images = []
+        for i in range(4):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"bullet{i}.png"))
             self.images.append(bitmap)
@@ -696,10 +738,12 @@ class projectile(pygame.sprite.Sprite):
 
 
     def move(self):
-        self.x = self.x + self.dx
-        self.y = self.y + self.dy
-        self.rect.x = int(self.x)
+        self.x = self.x + self.dx 
+        self.y = self.y + self.dy 
+        self.rect.x = int(self.x) 
         self.rect.y = int(self.y)
+
+
 
 
 
@@ -761,7 +805,6 @@ class Game(object):
         self.screen = pygame.display.set_mode((Settings.window_width, Settings.window_height))
         pygame.display.set_caption(Settings.title)
         self.clock = pygame.time.Clock()
-        pygame.mouse.set_visible(False)
         self.background0 = Background("0.png")
         self.background1 = Background("1.png")
         self.background2 = Background("2.png")
@@ -784,12 +827,29 @@ class Game(object):
         self.running = True
         self.length = 75
         self.game_started = False
-        self.cursor = pygame.image.load(os.path.join(Settings.path_image, "crosshair.png")).convert_alpha()
-        self.cursor_rect = self.cursor.get_rect()
+        self.cursors = []
+        for i in range(2):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"crosshair{i}.png"))
+            self.cursors.append(bitmap)
+        self.imageindex = 0
+        self.cursor_rect = self.cursors[self.imageindex].get_rect()
+        self.clock_time = pygame.time.get_ticks()
+        self.animation_time = 100
+
+
+
+    def animate(self):
+            if pygame.time.get_ticks() > self.clock_time:
+                self.clock_time = pygame.time.get_ticks() + self.animation_time
+                self.imageindex += 1
+                if self.imageindex >= len(self.cursors):
+                    self.imageindex = 0
+                self.cursor = self.cursors[self.imageindex]
         
 
-    def addplatform(self):
-        self.platforms.add(Platform(randint(1500,1800), randint(100, 700),randint(100,600), 10))
+
+        
 
 
     def sector_up(self):
@@ -806,12 +866,16 @@ class Game(object):
 
     def spawn(self):
         global score_value
-        if Settings.current_platforms < Settings.max_platforms:
-            Settings.current_platforms += 1
-            self.addplatform()
         if Settings.current_enemys < Settings.max_enemys:
             Settings.current_enemys += 1
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100), False))
+            if score_value <= 200:
+                if Settings.current_platforms < Settings.max_platforms:
+                    Settings.current_platforms += 1
+                    self.platforms.add(Platform(randint(1500,1800), randint(100, 700),randint(100,600), 10))
+                self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100), False))
+            elif score_value > 200 and score_value <= 400:
+                self.platforms.add(Platform(1800, 700 ,randint(100,600), 10))
+                self.stormbies.add(Stormbie("stormbieL0.png",100,1700,1))
 
     def font(self):
         global bullets
@@ -1333,6 +1397,7 @@ class Game(object):
                 self.mx, self.my = pygame.mouse.get_pos()
                 print(self.mx, self.my)
                 self.midclick()
+            
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
@@ -1382,7 +1447,7 @@ class Game(object):
         self.player.jump()
         self.sector_up()
         self.shoot_dice()
-
+        self.animate()
 
 
     def draw(self):
@@ -1400,9 +1465,11 @@ class Game(object):
         self.ammocrates.draw(self.screen)
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
-        self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
+        
+        
         
         self.font()
+        self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
         pygame.display.flip()
 
 if __name__ == "__main__":
