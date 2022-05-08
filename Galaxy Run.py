@@ -174,7 +174,7 @@ class Stormbie(pygame.sprite.Sprite):
 
 
 class Stormtrooper(pygame.sprite.Sprite):
-    def __init__(self, filename, health, tkposx, tkposy, trigger):
+    def __init__(self, filename, health, tkposx, tkposy, trigger, getting_hit):
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.stormtrooper_size)
@@ -198,6 +198,7 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
         self.platfrom_y = 0
+        self.getting_hit = getting_hit
 
     def animate(self):
             if pygame.time.get_ticks() > self.clock_time:
@@ -264,7 +265,7 @@ class Player(pygame.sprite.Sprite):
         self.shield = False
         self.sprinting = False
         self.flames_on = False
-        self.shieldpoints = 75
+        self.energypoints = 75
         self.passed_time = 0
         self.passed_fueltime = 0
         self.endurance = endurance
@@ -277,6 +278,7 @@ class Player(pygame.sprite.Sprite):
         self.run_fuel = False
         self.images = []
         self.usefuel = False
+        self.refilling = False
         if facing == "R":
             for i in range(2):
                 bitmap = pygame.image.load(os.path.join(
@@ -349,7 +351,7 @@ class Player(pygame.sprite.Sprite):
             self.rect.left = self.rect.left - self.speed
         if lives > 0:
             score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
-            facing = "L"
+      
         if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
                 self.images.clear()
                 for i in range(7):
@@ -373,7 +375,7 @@ class Player(pygame.sprite.Sprite):
         if self.health > 0:
             score_value += self.score_muliplier#0.1
                 #Spieler wird nach rechts verschoben
-            facing = "R" 
+       
         if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
             self.images.clear()###
             for i in range(7):
@@ -421,8 +423,8 @@ class Player(pygame.sprite.Sprite):
 
 
     def block(self):
-        if self.shieldpoints > 0:
-            self.shieldpoints = self.shieldpoints - 0.25
+        if self.energypoints > 0 and self.refilling == False:
+            self.energypoints = self.energypoints - 0.25
             self.shield = True
          
        
@@ -447,20 +449,19 @@ class Player(pygame.sprite.Sprite):
         
         self.datetime = datetime.now()
 
-
-
-        if self.shieldpoints <= 0:
+        if self.energypoints <= 0:
             if self.playing_shieldlow == False:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'shields_low.mp3')))
                 self.playing_shieldlow = True
             Game.timer(self)
         if self.passed_time >= 420:
-            
+            self.refilling = True
             if self.playing_shieldrefill == False:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'refill.mp3')))
                 self.playing_shieldrefill = True
-            self.shieldpoints = self.shieldpoints + 0.5 #0.25
-            if self.shieldpoints >= 75:
+            self.energypoints = self.energypoints + 0.5 #0.25
+            if self.energypoints >= 75:
+                self.refilling = False
                 self.passed_time = 0
                 self.playing_shieldrefill = False
                 self.playing_shieldlow = False
@@ -475,7 +476,7 @@ class Player(pygame.sprite.Sprite):
           #  if fuel < 200:
            #     Game.fueltimer(self)
             #    if self.passed_fueltime >= 300:
-                    fuel += 0.4
+                    fuel += 1#0.4
               #      if fuel >= 200:
                #         self.passed_fueltime = 0
                 #        self.run_fuel = False
@@ -487,30 +488,24 @@ class Player(pygame.sprite.Sprite):
   
 
     def flamethrower_on(self):
-            # if self.rect.top == 570:
+        
                 if facing == "R":
                     self.images.clear()
                     for i in range(2):
                         bitmap = pygame.image.load(os.path.join(
                             Settings.path_image, f"flamethrowing_R{i}.png"))
                         self.images.append(bitmap)
-
                 if facing == "L":
                     self.images.clear()
                     for i in range(2):
                         bitmap = pygame.image.load(os.path.join(
                             Settings.path_image, f"flamethrowing_L{i}.png"))
                         self.images.append(bitmap)
-                    
-                self.rect = self.image.get_rect()
-                self.rect.left = posy
-                self.rect.top = posx
                 self.flames_on = True
     
     def flamethrower_off(self):
         self.flames_on = False
                 
-       
         
     def jump(self):
         global jumping, endurance
@@ -546,9 +541,6 @@ class Platform(pygame.sprite.Sprite):
         self.width = width
         self.height = height
 
-
-        
-
     def playermove_R(self, speed):
             self.rect.left -= speed
 
@@ -568,17 +560,14 @@ class Pickups(pygame.sprite.Sprite):
         self.speed_h = 3
         self.speed_v = 5
         self.on_ground = False
-
-        
         self.platform_y = 670
         self.velocity_index = 0
         self.velocity = ([-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5])
-            
 
     def update(self):
-        if self.rect.top < 670 and self.on_ground == False:
+        if self.rect.top < self.platform_y and self.on_ground == False:
             self.rect.top += self.speed_v
-            if self.rect.top == 670:
+            if self.rect.top == self.platform_y:
                 self.on_ground = True
 
         if self.on_ground == True:
@@ -633,7 +622,6 @@ class Flame(pygame.sprite.Sprite):
             if pygame.time.get_ticks() > self.clock_time:
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
                 self.imageindex += 1
-
                 if self.imageindex >= len(self.images):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
@@ -663,7 +651,7 @@ class Flame(pygame.sprite.Sprite):
 
    
 class projectile(pygame.sprite.Sprite):
-    def __init__(self, filename, facing, dx, dy): #delta x and delta y
+    def __init__(self, filename, dx, dy): #delta x and delta y
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.bullet_size)
@@ -680,21 +668,14 @@ class projectile(pygame.sprite.Sprite):
         self.speed_v = 0
         self.x = x
         self.y = y
-        # self.facing = facing
-        # self.faced = False
         self.rotated_image = pygame.transform.rotate(self.image, int(self.angle*180/math.pi))
 
         self.images = []
-        # if facing == "R":
         for i in range(3):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"bullet{i}.png"))
             self.images.append(bitmap)
-        # if facing == "L":
-        #     for i in range(3):
-        #         bitmap = pygame.image.load(os.path.join(
-        #             Settings.path_image, f"bulletL{i}.png"))
-        #         self.images.append(bitmap)
+
 
         self.imageindex = 0
         self.image = self.images[self.imageindex]
@@ -720,18 +701,7 @@ class projectile(pygame.sprite.Sprite):
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)
 
-    # def update(self):
-    #     global facing
-    #     if self.facing == "R":
-    #         self.rect.move_ip(self.speed_h, self.speed_v)
-    #     if self.facing == "L":
-    #             projectile.change_direction_L(self)
-    #             self.rect.move_ip(-self.speed_h, self.speed_v)
-        
-    # def change_direction_L(self):
-    #     if facing == "L" and self.faced == False:
-    #         self.rect.left = posy - 75
-    #         self.faced = True
+
 
 class tkprojectile(pygame.sprite.Sprite):
     def __init__(self, filename, facing, x, y):
@@ -784,9 +754,6 @@ class tkprojectile(pygame.sprite.Sprite):
     def playermove_L(self, speed):
         self.rect.left += speed
 
-
-
-                
 class Game(object): 
     def __init__(self) -> None:
         super().__init__()
@@ -820,36 +787,6 @@ class Game(object):
         self.cursor = pygame.image.load(os.path.join(Settings.path_image, "crosshair.png")).convert_alpha()
         self.cursor_rect = self.cursor.get_rect()
         
-        
-
-
-    # def sector_up(self):
-    #     global score_value
-    #     if self.player.rect.x >= 1550:
-    #         self.sector = self.sector + 1
-    #         self.player.rect.x = -10
-    #         self.player.rect.y = self.player.rect.y
-            
-    #         for s in self.stormtroopers:
-    #             s.kill()
-    #         for a in self.ammocrates:
-    #             a.kill()
-    #         for h in self.healthpacks:
-    #             h.kill()
-    #         for b in self.stormbies:
-    #             b.kill()
-    #         for p in self.projectiles:
-    #             p.kill()
-    #         for t in self.tkprojectiles:
-    #             t.kill()
-            
-    #         self.spawn()
-    #     elif self.player.rect.x == -75:
-    #         self.sector = self.sector - 1
-    #         self.player.rect.x = 1550
-    #         self.player.rect.y = 570
-           
-    #         self.spawn()
 
     def addplatform(self):
         self.platforms.add(Platform(randint(1500,1800), randint(100, 700),randint(100,600), 10))
@@ -874,7 +811,7 @@ class Game(object):
             self.addplatform()
         if Settings.current_enemys < Settings.max_enemys:
             Settings.current_enemys += 1
-            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100)))
+            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100), False))
 
     def font(self):
         global bullets
@@ -929,7 +866,6 @@ class Game(object):
         elif self.player.health == 1:
             Healthcolor = (255, 0, 0)
 
-
         health_pos = posy - 25
         for h in range(self.player.health):
             health_pos = health_pos + 25
@@ -941,21 +877,19 @@ class Game(object):
         pygame.draw.rect(self.screen, (GREEN), pygame.Rect(10, 75, fuel, 10))
         pygame.draw.rect(self.screen, (BLUE), pygame.Rect(10, 200, self.player.endurance, 10))
  
-
-
-        if self.player.shieldpoints == 0:
+        if self.player.energypoints == 0:
             if self.length > 0:
                 self.length = self.length - 0.175
             
             pygame.draw.rect(self.screen, (RED), pygame.Rect(posy, posx - 20, self.length, 11),)
             pygame.draw.rect(self.screen, (150, 0, 0), pygame.Rect(posy, posx - 20, self.length, 11), 2)
-        if self.player.shieldpoints == 75:
+        if self.player.energypoints == 75:
             self.length = 75
       
 
 
-        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(posy, posx - 20, self.player.shieldpoints , 11))
-        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(posy, posx - 20, self.player.shieldpoints, 11), 2)
+        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(posy, posx - 20, self.player.energypoints , 11))
+        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(posy, posx - 20, self.player.energypoints, 11), 2)
 
         
         if self.player.health <= 0:
@@ -979,7 +913,6 @@ class Game(object):
             z.zposx = z.rect.left
             z.zposy = z.rect.top
 
-        
         posy = self.player.rect.left
         posx = self.player.rect.top
 
@@ -988,37 +921,43 @@ class Game(object):
             Settings.bullet_size = (100, 15)
             if bullets >= 0.5:
                 bullets -= 1
-                self.projectiles.add(projectile("bullet0.png", facing,self.mx ,self.my))
+                self.projectiles.add(projectile("bullet0.png",self.mx ,self.my))
                 print(self.mx, self.my)
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'blaster.wav')))
             else:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
     
 
-
     def shoot_dice(self):
         for s in self.stormtroopers:
             shoot_dice = randint(1, 100)
-            if shoot_dice == s.trigger:
+            if shoot_dice == s.trigger and s.getting_hit == False:
                 Settings.bullet_size = (100, 15)
                 self.tkprojectiles.add(tkprojectile("tkbullet0.png", s.facing,s.tkposy + 80,s.tkposx -50))
                 pygame.mixer.Channel(4).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'tkblast.mp3')))
 
                 
-
     def leftclick(self):
-        global flamethrower_is_active, shield_active, fuel
+        global shield_active, fuel
         leftclick = pygame.mouse.get_pressed() == (1, 0, 0)
         rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
         
         if leftclick == True:
-            if self.player.shieldpoints > 0:
-                self.player.shieldpoints = self.player.shieldpoints - 0.25
-                self.usefuel = True
-                Player.flamethrower_on(self.player)
-                if self.flames_on == False:
-                    self.flames.add(Flame("bullet0.png"))
-                    self.flames_on = True
+            if self.player.refilling == False:
+                if self.player.energypoints > 0:
+                    self.player.energypoints = self.player.energypoints - 0.25
+                    self.usefuel = True
+                    Player.flamethrower_on(self.player)
+                    if self.flames_on == False:
+                        self.flames.add(Flame("bullet0.png"))
+                        self.flames_on = True
+                if self.player.energypoints == 0:
+                    self.usefuel = False
+                    Player.flamethrower_off(self.player)
+                    self.flames_on = False
+                    for f in self.flames:
+                        f.kill()
+                
 
         else:
             self.flames_on = False
@@ -1065,9 +1004,6 @@ class Game(object):
             if self.passed_invtime <= 90:
                 self.passed_invtime = self.passed_invtime+ 1
             
-            
-                
-        
 
     def controls(self):
             global jumping
@@ -1115,11 +1051,6 @@ class Game(object):
                 self.background2.scroll_r(3 * self.player_speed)
                 self.background3.scroll_r(2 * self.player_speed)
                 self.background4.scroll_r(1 * self.player_speed)
-            # if keys[pygame.K_SPACE]:
-            #     if self.player.endurance > 50:
-                    
-            #         print(self.player.endurance)
-            #         jumping = True
             if keys[pygame.K_LSHIFT]:
                 self.player.sprinting = True
                 self.player.sprint()
@@ -1153,7 +1084,7 @@ class Game(object):
             pt.kill()
         level = 1
         score_value = 0
-        self.player.shieldpoints = 75
+        self.player.energypoints = 75
         self.player.endurance = 100
         self.spawned == False
         bullets = 20
@@ -1172,22 +1103,20 @@ class Game(object):
                 if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
                     self.player.platform_y = pt.rect.top - 150
                     self.player.rect.bottom = pt.rect.top
-                    self.player.on_ground = True
+                    #self.player.on_ground = True
                 # else:
                 #     self.player.platform_y = 570
 
-            if self.player.rect.top  <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
-                if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
-                    self.player.rect.top = pt.rect.bottom
-                    self.player.on_ground = True
+            # if self.player.rect.top  <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
+            #     if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+            #         self.player.rect.top = pt.rect.bottom
+            #         self.player.on_ground = True
 
             for s in self.stormtroopers:
                 if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
                         s.platform_y = pt.rect.top - 150
                         s.rect.bottom = pt.rect.top
-                    # else:
-                    #     s.platform_y = 570
 
                 if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
                     if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
@@ -1203,6 +1132,20 @@ class Game(object):
                 if z.rect.top  <= pt.rect.bottom and z.rect.top >= pt.rect.top:
                     if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
                         z.rect.top = pt.rect.bottom
+
+            for a in self.ammocrates:
+                if a.rect.bottom >= pt.rect.top and a.rect.bottom <= pt.rect.bottom:
+                    if a.rect.right  >= pt.rect.left and a.rect.left <= pt.rect.right:
+                        a.platform_y = pt.rect.top
+                        a.rect.bottom = pt.rect.top
+                        a.on_ground = True
+
+            for h in self.healthpacks:
+                if h.rect.bottom >= pt.rect.top and h.rect.bottom <= pt.rect.bottom:
+                    if h.rect.right  >= pt.rect.left and h.rect.left <= pt.rect.right:
+                        h.platform_y = pt.rect.top
+                        h.rect.bottom = pt.rect.top
+                        h.on_ground = True
 
 
 
@@ -1240,33 +1183,35 @@ class Game(object):
 
    
 
- 
-
-
     def hit(self):
         for s in self.stormtroopers:
             if pygame.sprite.spritecollide(s, self.projectiles, True):
                 s.health = s.health - 25
+                s.getting_hit = True
                 if s.health <=0:
                     s.kill()
                     self.spawncount = self.spawncount - 1
                     self.reward()
+            else:
+                s.getting_hit = False
 
             if s.rect.top >= 570:
                 s.kill()
    
-
-        
-    
             if pygame.sprite.spritecollide(s, self.flames, False):
                 s.health = s.health - 5
+                s.getting_hit = True
                 if s.health <=0:
                     s.kill()
                     self.reward()
+            else:
+                s.getting_hit = False
 
         if self.player.rect.top >= 570:
             self.player.kill()
             self.player.health = self.player.health - 3
+
+
         
         for z in self.stormbies:
             if pygame.sprite.spritecollide(z, self.projectiles, True):
@@ -1280,7 +1225,6 @@ class Game(object):
                 if z.health <=0:
                     z.kill()
                     self.reward()
-
 
         if pygame.sprite.spritecollide(self.player, self.tkprojectiles, True): #and self.player.shield == False:
                 self.player.invincible_off()
@@ -1327,7 +1271,6 @@ class Game(object):
        
 
     def draw_start(self):
-
         Titlefont = pygame.font.Font(None, 72)
         self.background4.draw(self.screen)
         self.background3.draw(self.screen)
@@ -1368,7 +1311,6 @@ class Game(object):
                 pygame.display.flip()
                 
 
-
     def run(self):
         while self.running:
             self.clock.tick(60)                         
@@ -1377,7 +1319,9 @@ class Game(object):
                 self.update()
                 self.draw()
                 self.get_cursor_center()
+                pygame.mouse.set_visible(False)
             else:
+                pygame.mouse.set_visible(True)
                 self.draw_start()
                 self.event_start()
         pygame.quit()       
