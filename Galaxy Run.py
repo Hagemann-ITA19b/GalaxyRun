@@ -50,7 +50,7 @@ class Settings(object):
     current_enemys = 0
     max_enemys = 1
     start_rockets = 5
-    
+    start_health = 3
     title = "Galaxy Run"
 
 # Musik
@@ -65,7 +65,7 @@ darksaber_sound = pygame. mixer. Sound(os.path.join(Settings.path_image, "darksa
   
 mixer.music.load(os.path.join(Settings.path_image, "Soundtrack.mp3"))
   
-#mixer.set_volume(0.1) #Immer noch extremst laut !!!
+
 pygame.mixer.music.set_volume(0.4)
 mixer.music.play()
 
@@ -256,7 +256,7 @@ class Player(pygame.sprite.Sprite):
         Player.pos(self)
         self.weapons = ["blaster", "rockets"]
         self.weapons_index = 0
-        self.health = 3
+        self.health = Settings.start_health
         self.rockets = Settings.start_rockets
         self.shield = False
         self.sprinting = False
@@ -858,6 +858,7 @@ class Game(object):
         self.spawned = False
         self.spawncount = 0
         self.speed = 1
+        self.level = 1
         self.running = True
         self.length = 75
         self.game_started = False
@@ -933,7 +934,7 @@ class Game(object):
         
         Fuelprint = font.render("Fuel: " + str(round(fuel)) + " liters", 1, (GREEN))
         scoreprint = font.render("Score: " + str(round(score_value)) + "m", 1, (WHITE))
-        levelprint = font.render("Level: " + str(level), 1, (WHITE))
+        levelprint = font.render("Level: " + str(self.level), 1, (WHITE))
         sectorprint = font.render("Sector: " + str(self.sector), 1, (WHITE))
         self.screen.blit(Ammo, (10, 10))
         self.screen.blit(Fuelprint, (10, 50))
@@ -1022,7 +1023,6 @@ class Game(object):
 
     def shoot_bullet(self):
             global bullets
-            # Settings.bullet_size = (100, 15)
             if bullets >= 1 and self.player.weapons_index == 0:
                 bullets -= 1
                 print(bullets)
@@ -1200,7 +1200,7 @@ class Game(object):
             z.kill()
         for pt in self.platforms:
             pt.kill()
-        level = 1
+        self.level = 1
         score_value = 0
         self.player.energypoints = 75
         self.player.endurance = 100
@@ -1208,7 +1208,7 @@ class Game(object):
         self.player.rockets = Settings.start_rockets
         bullets = 20
         fuel = 200
-        self.player.health = 3
+        self.player.health = Settings.start_health
         self.sector = 0
         self.player.rect.x = 50
         self.player.rect.y = 300
@@ -1386,7 +1386,7 @@ class Game(object):
     
     def reward(self):
         dice6 = randint(1, 6)
-                   
+        self.level = self.level + 1
         if dice6 == 1:
             self.ammocrates.add(Pickups("ammocrate.png"))
         elif dice6 == 2:
