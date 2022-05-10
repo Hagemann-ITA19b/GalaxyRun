@@ -20,9 +20,7 @@ shieldpoints = 100
 # tkposy = 0
 # tkposx = 0
 jumping = False
-
 shield_active = False
-
 level = 0
 facing = "R"
 posx = 0
@@ -51,6 +49,7 @@ class Settings(object):
     current_platforms = 0
     current_enemys = 0
     max_enemys = 1
+    start_rockets = 5
     
     title = "Galaxy Run"
 
@@ -255,10 +254,10 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, Settings.player_size)
         self.rect = self.image.get_rect()
         Player.pos(self)
-        self.weapons = []
-
+        self.weapons = ["blaster", "rockets"]
+        self.weapons_index = 0
         self.health = 3
-        self.rockets = 4
+        self.rockets = Settings.start_rockets
         self.shield = False
         self.sprinting = False
         self.flames_on = False
@@ -297,6 +296,15 @@ class Player(pygame.sprite.Sprite):
         self.velocity_index = 0
         self.velocity = ([-10,-9.5,-9,-8.5,-8,-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10])
 
+
+    def change_next_weapon(self):
+        self.weapons_index += 1
+        if self.weapons_index >= len(self.weapons):
+            self.weapons_index = 0
+    def change_previous_weapon(self):
+        self.weapons_index -= 1
+        if self.weapons_index < 0:
+            self.weapons_index = len(self.weapons) - 1
     def get_invincible(self):
         self.invincible = True
         self.run_inv = True
@@ -903,14 +911,26 @@ class Game(object):
         font_death = pygame.font.Font(None, 72)
 
 
-        bullet_pos = 230
-        for b in range(bullets):
-            bullet_pos = bullet_pos + 20
-            pygame.draw.rect(self.screen, (YELLOW), pygame.Rect(bullet_pos, 10, 10, 20))
-            pygame.draw.rect(self.screen, (RED), pygame.Rect(bullet_pos, 10, 10, 15))
-            pygame.draw.rect(self.screen, (BLACK), pygame.Rect(bullet_pos, 10, 10, 20), 2)
+        ammo_pos = 230
+        if self.player.weapons_index == 0:
+            Ammo = font.render("Ammo: " + str(round(bullets)) + " bullets", 1, (YELLOW))
+            for b in range(bullets):
+                ammo_pos = ammo_pos + 20
+                pygame.draw.rect(self.screen, (YELLOW), pygame.Rect(ammo_pos, 10, 10, 20))
+                pygame.draw.rect(self.screen, (RED), pygame.Rect(ammo_pos, 10, 10, 15))
+                pygame.draw.rect(self.screen, (BLACK), pygame.Rect(ammo_pos, 10, 10, 20), 2)
 
-        Ammo = font.render("Ammo: " + str(round(bullets)) + " bullets", 1, (YELLOW))
+        if self.player.weapons_index == 1:
+            Ammo = font.render("Ammo: " + str(self.player.rockets) + " rockets", 1, (YELLOW))
+            for r in range(self.player.rockets):
+                ammo_pos = ammo_pos + 20
+                self.rocket_image = pygame.image.load(os.path.join(Settings.path_image, "rocket.png")).convert_alpha()
+                self.rocket_image = pygame.transform.scale(self.rocket_image, (30, 30))
+                self.screen.blit(self.rocket_image, (ammo_pos, 10))
+
+
+
+        
         Fuelprint = font.render("Fuel: " + str(round(fuel)) + " liters", 1, (GREEN))
         scoreprint = font.render("Score: " + str(round(score_value)) + "m", 1, (WHITE))
         levelprint = font.render("Level: " + str(level), 1, (WHITE))
@@ -1003,22 +1023,22 @@ class Game(object):
     def shoot_bullet(self):
             global bullets
             # Settings.bullet_size = (100, 15)
-            if bullets >= 0.5:
+            if bullets >= 1 and self.player.weapons_index == 0:
                 bullets -= 1
+                print(bullets)
                 self.projectiles.add(projectile("bullet0.png",self.mx ,self.my))
  
                 print(self.mx, self.my)
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'blaster.wav')))
-            else:
+            elif bullets <= 0 and self.player.weapons_index == 0:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
             
-            if self.player.rockets >= 1:
-                print(self.player.rockets)
+            if self.player.rockets >= 1 and self.player.weapons_index == 1:
                 self.player.rockets = self.player.rockets - 1
                 self.rockets.add(Rocket("rocket0.png",self.mx ,self.my))
                 print(self.mx, self.my)
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'rocket_fire.wav')))
-            else:
+            elif self.player.rockets <= 0 and self.player.weapons_index == 1:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
     
 
@@ -1185,6 +1205,7 @@ class Game(object):
         self.player.energypoints = 75
         self.player.endurance = 100
         self.spawned == False
+        self.player.rockets = Settings.start_rockets
         bullets = 20
         fuel = 200
         self.player.health = 3
@@ -1316,6 +1337,7 @@ class Game(object):
             for r in self.rockets:
                 if pygame.sprite.spritecollide(pt,self.rockets, False):
                     r.explode()
+                
 
 
 
@@ -1344,6 +1366,13 @@ class Game(object):
                         self.player.kill()
                 if self.player.shield == True:
                         pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'darksaber.wav')))
+        
+        if pygame.sprite.spritecollide(self.player, self.rockets, False):
+            for r in self.rockets:
+                self.player.invincible_off()
+                if self.player.shield == False and self.player.invincible == False:
+                    self.player.get_invincible()
+                    self.player.health = self.player.health - 1
    
 
                 
@@ -1440,13 +1469,16 @@ class Game(object):
                 self.mx, self.my = pygame.mouse.get_pos()
                 print(self.mx, self.my)
                 self.midclick()
-            
-
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
                     self.running = False
                 if event.key == pygame.K_SPACE:
                     jumping = True
+                if event.key == pygame.K_q:
+                    self.player.change_previous_weapon()
+                if event.key == pygame.K_e:
+                    self.player.change_next_weapon()
+
             elif event.type == pygame.QUIT:         
                 self.running = False
         
