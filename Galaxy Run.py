@@ -35,6 +35,8 @@ BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0) 
 CYAN = (0, 255, 255) 
 MAGENTA = (255, 0, 255)
+PURP = (123, 32, 251)
+#CYAN = (1, 227, 242)
 
 class Settings(object):
     window_height = 720
@@ -50,7 +52,8 @@ class Settings(object):
     current_enemys = 0
     max_enemys = 1
     start_rockets = 5
-    start_health = 3
+    player_maxhealth = 3
+    next_level = 10
     title = "Galaxy Run"
 
 # Musik
@@ -203,7 +206,6 @@ class Stormtrooper(pygame.sprite.Sprite):
                 self.image = self.images[self.imageindex]
 
 
-    
     def move(self):
         self.rect.left += self.speed_h
         self.rect.top += self.speed_v
@@ -256,7 +258,7 @@ class Player(pygame.sprite.Sprite):
         Player.pos(self)
         self.weapons = ["blaster", "rockets"]
         self.weapons_index = 0
-        self.health = Settings.start_health
+        self.health = Settings.player_maxhealth
         self.rockets = Settings.start_rockets
         self.shield = False
         self.sprinting = False
@@ -423,10 +425,6 @@ class Player(pygame.sprite.Sprite):
                         pygame.mixer.pause()
 
                        
-
-            
-
-
     def block(self):
         if self.energypoints > 0 and self.refilling == False:
             self.energypoints = self.energypoints - 0.25
@@ -490,7 +488,6 @@ class Player(pygame.sprite.Sprite):
                         #print(self.endurance)
 
     def flamethrower_on(self):
-        
                 if facing == "R":
                     self.images.clear()
                     for i in range(2):
@@ -529,7 +526,6 @@ class Player(pygame.sprite.Sprite):
                 self.velocity_index = 0
                 if self.rect.top == self.platform_y:
                     jumping = False
-                    
         Player.get_pos(self)
 
 class Platform(pygame.sprite.Sprite):
@@ -549,9 +545,12 @@ class Platform(pygame.sprite.Sprite):
     def playermove_L(self, speed):
             self.rect.left += speed
 
-class UpgradeUI(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height):
-        pass
+# class UpgradeUI(pygame.sprite.Sprite):
+#     def __init__(self):
+#         self.font = pygame.font.Font(None, 360)
+#         self.upgrade1 = 
+
+
 
 
 
@@ -675,15 +674,12 @@ class projectile(pygame.sprite.Sprite):
         self.speed_h = 10
         self.speed_v = 0
         self.x = x
-        self.y = y
-
+        self.y = y        
         self.images = []
         for i in range(4):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"bullet{i}.png"))
             self.images.append(bitmap)
-
-
         self.imageindex = 0
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
@@ -725,7 +721,9 @@ class Rocket(pygame.sprite.Sprite):
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"rocket{i}.png"))
-            bitmap = pygame.transform.scale(bitmap, (100,20))
+            bitmap = pygame.transform.scale(bitmap, (50,20))
+            bitmap = pygame.transform.rotate(bitmap, self.angle)
+
             self.images.append(bitmap)
         self.imageindex = 0
         self.image = self.images[self.imageindex]
@@ -862,12 +860,16 @@ class Game(object):
         self.running = True
         self.length = 75
         self.game_started = False
+        self.upgrade_allowed = False
+        self.levelup = False
+        self.xp = 0
         self.cursors = []
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
             self.cursors.append(bitmap)
         self.imageindex = 0
+        self.colorindex = 0
         self.cursor_rect = self.cursors[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
@@ -910,7 +912,6 @@ class Game(object):
         global bullets
         font = pygame.font.Font(None, 36)
         font_death = pygame.font.Font(None, 72)
-
 
         ammo_pos = 230
         if self.player.weapons_index == 0:
@@ -963,6 +964,7 @@ class Game(object):
             pygame.draw.rect(self.screen, (zhealthcolor), pygame.Rect(z.zposx, z.zposy, z.health, 11))
             pygame.draw.rect(self.screen, (BLACK), pygame.Rect(z.zposx, z.zposy, z.health, 11), 2)
 
+
      
         if self.player.health >= 3:
             Healthcolor = (0, 255, 0)
@@ -977,10 +979,15 @@ class Game(object):
             pygame.draw.rect(self.screen, (Healthcolor), pygame.Rect(health_pos, posx - 10, 25, 11))
             pygame.draw.rect(self.screen, (BLACK), pygame.Rect(health_pos, posx- 10, 25, 11), 2)
 
+# #Settings.next_level
+#         self.xpbar_size = 500
+#         if self.xp <= 500:
+#             self.xpbar_size = 500
 
         pygame.draw.rect(self.screen, (BLACK), pygame.Rect(10,75, 200, 11), 2)
         pygame.draw.rect(self.screen, (GREEN), pygame.Rect(10, 75, fuel, 10))
-        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(10, 200, self.player.endurance, 10))
+        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(600, 200, self.xp, 30))
+        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(600, 200, 500, 30), 2)
  
         if self.player.energypoints == 0:
             if self.length > 0:
@@ -1005,6 +1012,38 @@ class Game(object):
             self.screen.blit(levelprint, (700, 600))
             self.screen.blit(Deathscreen, (485, Settings.window_height // 2 - 100))
             self.screen.blit(PressR, (700, Settings.window_height // 2 + 30))
+
+        if self.upgrade_allowed == True:
+            self.screen.blit(self.upgrade1, (875, 60))
+            self.screen.blit(self.upgrade2, (875, 100))
+            self.screen.blit(self.upgrade3, (875, 140))
+
+    
+    def upgrade_menu(self):
+        self.colors = [CYAN, MAGENTA]                 #switches between colors
+        if pygame.time.get_ticks() > self.clock_time: #
+            self.clock_time = pygame.time.get_ticks() #
+            self.colorindex += 1                      #
+        if self.colorindex >= len(self.colors):       #
+            self.colorindex = 0                       #
+        self.color = self.colors[self.colorindex]     #
+
+
+        if self.levelup == True:
+            self.upgrade_allowed = True
+        font = pygame.font.Font(None, 36)
+        keys = pygame.key.get_pressed()
+        if self.upgrade_allowed == True:
+            self.upgrade1 = font.render(str(self.player.health)+ "health" + "+ 1", 1, (self.color))
+            self.upgrade2 = font.render("damage + 5", 1, (self.color))
+            self.upgrade3 = font.render("fuel + 20", 1, (self.color))
+
+            if keys[pygame.K_1]:
+                self.upgrade_allowed = False
+                self.levelup = False
+                Settings.player_maxhealth = Settings.player_maxhealth + 1
+                self.player.health = Settings.player_maxhealth
+        
 
 
 
@@ -1208,7 +1247,7 @@ class Game(object):
         self.player.rockets = Settings.start_rockets
         bullets = 20
         fuel = 200
-        self.player.health = Settings.start_health
+        self.player.health = Settings.player_maxhealth
         self.sector = 0
         self.player.rect.x = 50
         self.player.rect.y = 300
@@ -1266,14 +1305,6 @@ class Game(object):
                         h.rect.bottom = pt.rect.top
                         h.on_ground = True
 
-
-
-    
-
-                    
-
-
-       
     def countdown(time_sec): #FÜR SPÄTER
         while time_sec:
             mins, secs = divmod(time_sec, 60)
@@ -1339,9 +1370,6 @@ class Game(object):
                     r.explode()
                 
 
-
-
-        
         for z in self.stormbies:
             if pygame.sprite.spritecollide(z, self.projectiles, True):
                 z.health = z.health - 25
@@ -1367,15 +1395,15 @@ class Game(object):
                 if self.player.shield == True:
                         pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'darksaber.wav')))
         
-        if pygame.sprite.spritecollide(self.player, self.rockets, False):
+        if pygame.sprite.spritecollide(self.player, self.rockets, False) :
             for r in self.rockets:
-                self.player.invincible_off()
-                if self.player.shield == False and self.player.invincible == False:
-                    self.player.get_invincible()
-                    self.player.health = self.player.health - 1
-   
+                if r.exploding == True:
+                    self.player.invincible_off()
+                    if self.player.shield == False and self.player.invincible == False:
+                        self.player.get_invincible()
+                        self.player.health = self.player.health - 1
 
-                
+
         if pygame.sprite.spritecollide(self.player, self.stormbies, False):
                 self.player.invincible_off()
                 if self.player.invincible == False:
@@ -1386,7 +1414,13 @@ class Game(object):
     
     def reward(self):
         dice6 = randint(1, 6)
-        self.level = self.level + 1
+        self.xp = self.xp + 5
+        if self.xp == Settings.next_level:
+            self.level = self.level + 1
+            self.levelup = True
+            self.xp = 0
+            Settings.next_level = Settings.next_level + 25
+
         if dice6 == 1:
             self.ammocrates.add(Pickups("ammocrate.png"))
         elif dice6 == 2:
@@ -1401,7 +1435,7 @@ class Game(object):
         if pygame.sprite.spritecollide(self.player, self.ammocrates, True):
             global bullets
             bullets = bullets + 4
-        if self.player.health < 3:
+        if self.player.health < Settings.player_maxhealth:
             if pygame.sprite.spritecollide(self.player, self.healthpacks, True):
                 self.player.health = self.player.health + 1
        
@@ -1464,6 +1498,7 @@ class Game(object):
 
     def watch_for_events(self):
         global jumping
+        
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.mx, self.my = pygame.mouse.get_pos()
@@ -1492,6 +1527,7 @@ class Game(object):
         
 
     def update(self):
+        self.upgrade_menu()
         self.stormtroopers.update()
         self.stormbies.update()
         self.projectiles.update()
@@ -1544,9 +1580,6 @@ class Game(object):
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
         self.rockets.draw(self.screen)
-        
-        
-        
         self.font()
         self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
         pygame.display.flip()
