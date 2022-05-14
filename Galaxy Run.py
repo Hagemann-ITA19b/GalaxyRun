@@ -431,7 +431,6 @@ class Player(pygame.sprite.Sprite):
         if self.energypoints > 0 and self.refilling == False:
             self.energypoints = self.energypoints - 0.25
             self.shield = True
-         
        
             self.images.clear()
             for i in range(16):
@@ -546,17 +545,6 @@ class Platform(pygame.sprite.Sprite):
 
     def playermove_L(self, speed):
             self.rect.left += speed
-
-# class UpgradeUI(pygame.sprite.Sprite):
-#     def __init__(self):
-#         self.font = pygame.font.Font(None, 360)
-#         self.upgrade1 = 
-
-
-
-
-
-
 
 class Pickups(pygame.sprite.Sprite):
     def __init__(self, filename):
@@ -725,7 +713,6 @@ class Rocket(pygame.sprite.Sprite):
                 Settings.path_image, f"rocket{i}.png"))
             bitmap = pygame.transform.scale(bitmap, (50,20))
             bitmap = pygame.transform.rotate(bitmap, self.angle)
-
             self.images.append(bitmap)
         self.imageindex = 0
         self.image = self.images[self.imageindex]
@@ -743,7 +730,6 @@ class Rocket(pygame.sprite.Sprite):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
             if self.exploding == True:
-                
                 if self.imageindex < len(self.images):
                     self.image = self.images[self.imageindex]
                     self.rect = self.image.get_rect()
@@ -855,7 +841,6 @@ class Game(object):
         self.platforms = pygame.sprite.Group()
         self.flames_on = False
         self.sector = 0
-        self.spawned = False
         self.spawncount = 0
         self.speed = 1
         self.level = 1
@@ -867,6 +852,9 @@ class Game(object):
         self.xp = 0
         self.xp_gained = False
         self.xp_pos = -30
+        self.current_xp = 0
+        self.passed_bartime = 0
+        self.run_bar = False
         self.cursors = []
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
@@ -987,18 +975,28 @@ class Game(object):
         pygame.draw.rect(self.screen, (GREEN), pygame.Rect(10, 75, fuel, 10))
 
         
-        if self.xp_gained == True:#xpbar animate down
+        if self.xp_gained == True and self.run_bar == False and self.passed_bartime== 0:#xpbar animate down
             if self.xp_pos < 10:
                 self.xp_pos = self.xp_pos + 1
                 if self.xp_pos == 10:
-                    self.xp_gained = False
-        if self.xp_gained == False and self.xp_pos > - 30: #xpbar animate up
-            self.xp_pos = self.xp_pos - 1
+                    if self.passed_bartime == 0:
+                        self.xp_gained = False
+                        self.run_bar = True
+                        print("xp bar run")
 
-        pygame.draw.rect(self.screen, (GREEN), pygame.Rect(600, self.xp_pos, self.xp * 5 , 30))
+
+        if self.run_bar == False or self.passed_bartime == 0:
+            self.passed_bartime = 0
+            if self.xp_gained == False and self.xp_pos > - 30: #xpbar animate up
+                self.xp_pos = self.xp_pos - 1
+
+        if self.current_xp < self.xp and self.xp_pos > -30:# and self.xp_gained == False:
+            self.current_xp = self.current_xp + 0.1
+
+        pygame.draw.rect(self.screen, (GREEN), pygame.Rect(600, self.xp_pos, self.current_xp * 5 , 30))
         pygame.draw.rect(self.screen, (BLACK), pygame.Rect(600, self.xp_pos,Settings.next_level * 5, 30), 2)
-        xp = font.render("xp: " + str(self.xp) + "/" + str(Settings.next_level), 1, (WHITE))
-        self.screen.blit(xp, (795, self.xp_pos+ 1))
+        xp = font.render("xp: " + str(round(self.current_xp)) + "/" + str(Settings.next_level), 1, (WHITE))
+        self.screen.blit(xp, (795, self.xp_pos+ 2))
 
  
         if self.player.energypoints == 0:
@@ -1086,10 +1084,7 @@ class Game(object):
             global bullets
             if bullets >= 1 and self.player.weapons_index == 0:
                 bullets -= 1
-                print(bullets)
                 self.projectiles.add(projectile("bullet0.png",self.mx ,self.my))
- 
-                print(self.mx, self.my)
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'blaster.wav')))
             elif bullets <= 0 and self.player.weapons_index == 0:
                 pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
@@ -1178,7 +1173,16 @@ class Game(object):
         if self.run_inv == True:
             if self.passed_invtime <= 90:
                 self.passed_invtime = self.passed_invtime+ 1
-            
+
+    def xpabrtimer(self):
+            if self.run_bar == True:
+                if self.passed_bartime <= 90:
+                    self.passed_bartime = self.passed_bartime+ 1
+                if self.passed_bartime >= 90:
+                    self.run_bar = False
+
+                    
+                
 
     def controls(self):
             global jumping
@@ -1262,10 +1266,11 @@ class Game(object):
         for pt in self.platforms:
             pt.kill()
         self.level = 1
+        self.xp = 0
+        self.current_xp = 0
         score_value = 0
         self.player.energypoints = 75
         self.player.endurance = 100
-        self.spawned == False
         self.player.rockets = Settings.start_rockets
         bullets = 20
         fuel = 200
@@ -1441,8 +1446,8 @@ class Game(object):
         if self.xp == Settings.next_level:
             self.level = self.level + 1
             self.levelup = True
+            self.current_xp = 0
             self.xp = 0
-            # Settings.next_level = Settings.next_level + 25
 
         if dice6 == 1:
             self.ammocrates.add(Pickups("ammocrate.png"))
@@ -1458,6 +1463,7 @@ class Game(object):
         if pygame.sprite.spritecollide(self.player, self.ammocrates, True):
             global bullets
             bullets = bullets + 4
+            self.player.rockets = self.player.rockets + 1
         if self.player.health < Settings.player_maxhealth:
             if pygame.sprite.spritecollide(self.player, self.healthpacks, True):
                 self.player.health = self.player.health + 1
@@ -1525,7 +1531,6 @@ class Game(object):
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.mx, self.my = pygame.mouse.get_pos()
-                print(self.mx, self.my)
                 self.midclick()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
@@ -1585,6 +1590,7 @@ class Game(object):
         self.sector_up()
         self.shoot_dice()
         self.animate()
+        self.xpabrtimer()
 
 
     def draw(self):
