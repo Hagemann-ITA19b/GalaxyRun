@@ -53,7 +53,9 @@ class Settings(object):
     max_enemys = 1
     start_rockets = 5
     player_maxhealth = 3
-    next_level = 10
+    next_level = 100
+    player_damage = 1
+    player_fuel = 200
     title = "Galaxy Run"
 
 # Musik
@@ -473,7 +475,7 @@ class Player(pygame.sprite.Sprite):
             self.run_fuel = False
             self.passed_fueltime = 0
        
-        if self.rect.top == self.platform_y and fuel < 200: #and #self.usefuel == False:
+        if self.rect.top == self.platform_y and fuel < Settings.player_fuel: #and #self.usefuel == False:
         #    self.run_fuel = True
          #   print(self.passed_fueltime)
           #  if fuel < 200:
@@ -863,6 +865,8 @@ class Game(object):
         self.upgrade_allowed = False
         self.levelup = False
         self.xp = 0
+        self.xp_gained = False
+        self.xp_pos = -30
         self.cursors = []
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
@@ -979,15 +983,23 @@ class Game(object):
             pygame.draw.rect(self.screen, (Healthcolor), pygame.Rect(health_pos, posx - 10, 25, 11))
             pygame.draw.rect(self.screen, (BLACK), pygame.Rect(health_pos, posx- 10, 25, 11), 2)
 
-# #Settings.next_level
-#         self.xpbar_size = 500
-#         if self.xp <= 500:
-#             self.xpbar_size = 500
-
-        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(10,75, 200, 11), 2)
+        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(10,75,Settings.player_fuel, 11), 2)
         pygame.draw.rect(self.screen, (GREEN), pygame.Rect(10, 75, fuel, 10))
-        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(600, 200, self.xp, 30))
-        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(600, 200, 500, 30), 2)
+
+        
+        if self.xp_gained == True:#xpbar animate down
+            if self.xp_pos < 10:
+                self.xp_pos = self.xp_pos + 1
+                if self.xp_pos == 10:
+                    self.xp_gained = False
+        if self.xp_gained == False and self.xp_pos > - 30: #xpbar animate up
+            self.xp_pos = self.xp_pos - 1
+
+        pygame.draw.rect(self.screen, (GREEN), pygame.Rect(600, self.xp_pos, self.xp * 5 , 30))
+        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(600, self.xp_pos,Settings.next_level * 5, 30), 2)
+        xp = font.render("xp: " + str(self.xp) + "/" + str(Settings.next_level), 1, (WHITE))
+        self.screen.blit(xp, (795, self.xp_pos+ 1))
+
  
         if self.player.energypoints == 0:
             if self.length > 0:
@@ -1035,7 +1047,7 @@ class Game(object):
         keys = pygame.key.get_pressed()
         if self.upgrade_allowed == True:
             self.upgrade1 = font.render(str(self.player.health)+ "health" + "+ 1", 1, (self.color))
-            self.upgrade2 = font.render("damage + 5", 1, (self.color))
+            self.upgrade2 = font.render("damage up", 1, (self.color))
             self.upgrade3 = font.render("fuel + 20", 1, (self.color))
 
             if keys[pygame.K_1]:
@@ -1043,6 +1055,16 @@ class Game(object):
                 self.levelup = False
                 Settings.player_maxhealth = Settings.player_maxhealth + 1
                 self.player.health = Settings.player_maxhealth
+
+            if keys[pygame.K_2]:
+                self.upgrade_allowed = False
+                self.levelup = False
+                Settings.player_damage = Settings.player_damage + 0.5
+
+            if keys[pygame.K_3]:
+                self.upgrade_allowed = False
+                self.levelup = False
+                Settings.player_fuel = Settings.player_fuel + 50
         
 
 
@@ -1341,7 +1363,7 @@ class Game(object):
                 self.reward()
 
             if pygame.sprite.spritecollide(s, self.projectiles, True):
-                s.health = s.health - 25
+                s.health = s.health - 25 * Settings.player_damage
                 s.getting_hit = True
             else:
                 s.getting_hit = False
@@ -1349,13 +1371,13 @@ class Game(object):
 
             for r in self.rockets:
                 if pygame.sprite.spritecollide(s, self.rockets, False):
-                    s.health = s.health - 100
+                    s.health = s.health - 100 * Settings.player_damage
                     r.explode()
             if s.rect.top >= 570:
                 s.kill()
    
             if pygame.sprite.spritecollide(s, self.flames, False):
-                s.health = s.health - 5
+                s.health = s.health - 5 * Settings.player_damage
                 s.getting_hit = True
             else:
                 s.getting_hit = False
@@ -1372,13 +1394,13 @@ class Game(object):
 
         for z in self.stormbies:
             if pygame.sprite.spritecollide(z, self.projectiles, True):
-                z.health = z.health - 25
+                z.health = z.health - 25 * Settings.player_damage
                 if z.health <=0:
                     z.kill()
                     self.reward()
 
             if pygame.sprite.spritecollide(z, self.flames, False):
-                z.health = z.health - 10
+                z.health = z.health - 10 * Settings.player_damage
                 if z.health <=0:
                     z.kill()
                     self.reward()
@@ -1415,11 +1437,12 @@ class Game(object):
     def reward(self):
         dice6 = randint(1, 6)
         self.xp = self.xp + 5
+        self.xp_gained = True
         if self.xp == Settings.next_level:
             self.level = self.level + 1
             self.levelup = True
             self.xp = 0
-            Settings.next_level = Settings.next_level + 25
+            # Settings.next_level = Settings.next_level + 25
 
         if dice6 == 1:
             self.ammocrates.add(Pickups("ammocrate.png"))
