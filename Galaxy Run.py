@@ -232,16 +232,29 @@ class Stormtrooper(pygame.sprite.Sprite):
 
         if self.facing == "L":
             self.images.clear()
-            for i in range(3):
-                bitmap = pygame.image.load(os.path.join(
-                    Settings.path_image, f"stormtrooperR{i}.png"))
-                self.images.append(bitmap)
+            if self.getting_hit == False:
+                for i in range(3):
+                    bitmap = pygame.image.load(os.path.join(
+                        Settings.path_image, f"stormtrooperR{i}.png"))
+                    self.images.append(bitmap)
+            elif self.getting_hit == True:
+                for i in range(3):
+                    bitmap = pygame.image.load(os.path.join(
+                        Settings.path_image, f"stormtrooperL_hit{i}.png"))
+                    self.images.append(bitmap)
+
         elif self.facing == "R":
             self.images.clear()
-            for i in range(3):
-                bitmap = pygame.image.load(os.path.join(
-                    Settings.path_image, f"stormtrooperL{i}.png"))
-                self.images.append(bitmap)
+            if self.getting_hit == False:
+                for i in range(3):
+                    bitmap = pygame.image.load(os.path.join(
+                        Settings.path_image, f"stormtrooperL{i}.png"))
+                    self.images.append(bitmap)
+            elif self.getting_hit == True:
+                for i in range(3):
+                    bitmap = pygame.image.load(os.path.join(
+                        Settings.path_image, f"stormtrooperR_hit{i}.png"))
+                    self.images.append(bitmap)
 
 
         #self.move()
@@ -658,7 +671,6 @@ class projectile(pygame.sprite.Sprite):
         x = self.rect.left
         y = self.rect.top
         self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
-        print('Angle in degrees:', int(self.angle*180/math.pi))
         self.dx = math.cos(self.angle) * 30
         self.dy = math.sin(self.angle) * 30
         self.speed_h = 10
@@ -1382,7 +1394,7 @@ class Game(object):
                 s.kill()
    
             if pygame.sprite.spritecollide(s, self.flames, False):
-                s.health = s.health - 5 * Settings.player_damage
+                s.health = s.health - 3 * Settings.player_damage
                 s.getting_hit = True
             else:
                 s.getting_hit = False
