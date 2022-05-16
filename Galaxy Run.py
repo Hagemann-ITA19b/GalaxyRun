@@ -829,6 +829,29 @@ class tkprojectile(pygame.sprite.Sprite):
     def playermove_L(self, speed):
         self.rect.left += speed
 
+class Cutscene():
+    def __init__(self, image, text,y):
+        self.image = image
+        self.y = y
+        self.text = text
+        self.text_font = pygame.font.Font(None, 72)
+        self.text_color = BLACK
+        self.text_pos = (10, 600)
+        self.text_rect = pygame.Rect(self.text_pos, self.text_font.size(self.text))
+        self.text_surface = self.text_font.render(self.text,True,  self.text_color)
+    
+    def animate(self):
+        self.y = self.y - 112
+        
+
+    def draw(self, screen):
+        screen.blit(self.image, (1400, self.y))
+        pygame.draw.rect(screen, (WHITE), pygame.Rect(self.text_pos[0] - 10, self.text_pos[1] - 10, 1600, 400))
+        pygame.draw.rect(screen, (BLACK), pygame.Rect(self.text_pos[0]- 10, self.text_pos[1] -10, 1600, 400),8)
+        screen.blit(self.text_surface, self.text_rect)
+
+
+
 class Game(object): 
     def __init__(self) -> None:
         super().__init__()
@@ -868,6 +891,7 @@ class Game(object):
         self.passed_bartime = 0
         self.run_bar = False
         self.cursors = []
+        self.cutscene_on = False
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -877,6 +901,7 @@ class Game(object):
         self.cursor_rect = self.cursors[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
+        self.scene_in_progress = False
 
 
 
@@ -935,8 +960,6 @@ class Game(object):
                 self.screen.blit(self.rocket_image, (ammo_pos, 10))
 
 
-
-        
         Fuelprint = font.render("Fuel: " + str(round(fuel)) + " liters", 1, (GREEN))
         scoreprint = font.render("Score: " + str(round(score_value)) + "m", 1, (WHITE))
         levelprint = font.render("Level: " + str(self.level), 1, (WHITE))
@@ -1193,8 +1216,6 @@ class Game(object):
                 if self.passed_bartime >= 90:
                     self.run_bar = False
 
-                    
-                
 
     def controls(self):
             global jumping
@@ -1258,7 +1279,7 @@ class Game(object):
                 self.restart()
             if keys[pygame.K_p]:
                 self.game_started = False
-        
+                self.cutscene_on = True
     def restart(self):
         global bullets, fuel, score_value, lives, spawncount, count, level
         for s in self.stormtroopers:
@@ -1520,26 +1541,47 @@ class Game(object):
                 Start = self.Startfont.render("Start Adventure", 1, (BLACK))
                 self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
                 pygame.display.flip()
+
+
+    def cutscene(self):
+        # self.screen.fill(BLACK)
+        # self.screen.blit(self.cutscene_image, (0,0))
+        # pygame.display.flip()
+        # self.game_started = True
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:    
+                 self.running = False
+            elif event.type == pygame.QUIT:         
+                self.running = False
+        
+        sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"Hello there", 400)
+        sc1.animate()
+        sc1.draw(self.screen)
+        pygame.display.flip()
+        
                 
 
     def run(self):
         while self.running:
             self.clock.tick(60)                         
-            if self.game_started == True:
+            if self.game_started == True and self.cutscene_on == False:
                 self.watch_for_events()
                 self.update()
                 self.draw()
                 self.get_cursor_center()
                 pygame.mouse.set_visible(False)
-            else:
+            elif self.game_started == False and self.cutscene_on == False:
                 pygame.mouse.set_visible(True)
                 self.draw_start()
                 self.event_start()
+            elif self.cutscene_on == True:
+                self.cutscene()
         pygame.quit()       
 
     def watch_for_events(self):
         global jumping
-        
+    
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.mx, self.my = pygame.mouse.get_pos()
