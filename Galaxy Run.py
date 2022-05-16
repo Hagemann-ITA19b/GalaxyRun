@@ -830,9 +830,9 @@ class tkprojectile(pygame.sprite.Sprite):
         self.rect.left += speed
 
 class Cutscene():
-    def __init__(self, image, text,y):
+    def __init__(self, image, text,):
         self.image = image
-        self.y = y
+        self.y = 500
         self.text = text
         self.text_font = pygame.font.Font(None, 72)
         self.text_color = BLACK
@@ -892,6 +892,7 @@ class Game(object):
         self.run_bar = False
         self.cursors = []
         self.cutscene_on = False
+        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"Buy Perfect Heist 2")
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -1275,11 +1276,11 @@ class Game(object):
             if keys[pygame.K_w]:
                 self.player.moveUp()
             if keys[pygame.K_r]:
-                #self.reload()
                 self.restart()
             if keys[pygame.K_p]:
                 self.game_started = False
                 self.cutscene_on = True
+                
     def restart(self):
         global bullets, fuel, score_value, lives, spawncount, count, level
         for s in self.stormtroopers:
@@ -1554,10 +1555,8 @@ class Game(object):
                  self.running = False
             elif event.type == pygame.QUIT:         
                 self.running = False
-        
-        sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"Hello there", 400)
-        sc1.animate()
-        sc1.draw(self.screen)
+
+        self.sc1.animate()
         pygame.display.flip()
         
                 
@@ -1646,6 +1645,8 @@ class Game(object):
         self.animate()
         self.xpabrtimer()
 
+        self.sc1.animate()
+
 
     def draw(self):
         self.background4.draw(self.screen)
@@ -1665,7 +1666,15 @@ class Game(object):
         self.rockets.draw(self.screen)
         self.font()
         self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
+
         pygame.display.flip()
+
+        if self.cutscene_on == True:
+
+            self.sc1.draw(self.screen)
+            pygame.display.flip()
+
+
 
 if __name__ == "__main__":
     os.environ["SDL_VIDEO_WINDOW_POS"] = "50, 50"
