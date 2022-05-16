@@ -1,4 +1,5 @@
 from datetime import datetime
+from posixpath import split
 import pygame
 import os
 from random import randint
@@ -832,23 +833,61 @@ class tkprojectile(pygame.sprite.Sprite):
 class Cutscene():
     def __init__(self, image, text,):
         self.image = image
-        self.y = 500
+        self.y = 100
         self.text = text
         self.text_font = pygame.font.Font(None, 72)
         self.text_color = BLACK
         self.text_pos = (10, 600)
-        self.text_rect = pygame.Rect(self.text_pos, self.text_font.size(self.text))
-        self.text_surface = self.text_font.render(self.text,True,  self.text_color)
+        self.text_posx = 10
+        self.text_posy = 600
+        self.textindex = 0
+        self.textlist = self.text.split("#")
+        self.textlist.append(self.text)
+        self.letter = self.textlist[self.textindex]
+        self.animate_up = True
+
+        self.next_pos = 0
+
+        self.clock_time = pygame.time.get_ticks()
+        self.animation_time = 100
+
+
+
+
+    def get_pos(self):
+        if self.y == 200:
+            self.animate_up = True
+        if self.y == 100:
+            self.animate_up = False
     
     def animate(self):
-        self.y = self.y - 112
+        self.get_pos()
+        if self.animate_up == True:
+            self.y = self.y - 1
+        elif self.animate_up == False:
+            self.y = self.y + 1
+
+
+
+        if pygame.time.get_ticks() > self.clock_time:
+            self.clock_time = pygame.time.get_ticks() + self.animation_time
+            self.textindex += 1
+            self.next_pos = self.next_pos + 15
+            if self.textindex >= len(self.textlist):
+                self.textindex = 0
+            self.letter = self.textlist[self.textindex]
+            print(self.letter)
         
 
     def draw(self, screen):
         screen.blit(self.image, (1400, self.y))
         pygame.draw.rect(screen, (WHITE), pygame.Rect(self.text_pos[0] - 10, self.text_pos[1] - 10, 1600, 400))
         pygame.draw.rect(screen, (BLACK), pygame.Rect(self.text_pos[0]- 10, self.text_pos[1] -10, 1600, 400),8)
-        screen.blit(self.text_surface, self.text_rect)
+
+        test = self.text_font.render(self.letter, 1, (BLACK))
+        screen.blit(test, (self.text_posx + self.next_pos, self.text_posy))
+
+
 
 
 
@@ -892,7 +931,7 @@ class Game(object):
         self.run_bar = False
         self.cursors = []
         self.cutscene_on = False
-        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"Buy Perfect Heist 2")
+        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"B#u#y# #P#e#r#f#e#c#t# #H#e#i#s#t# #2")
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -902,7 +941,6 @@ class Game(object):
         self.cursor_rect = self.cursors[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-        self.scene_in_progress = False
 
 
 
@@ -1545,17 +1583,17 @@ class Game(object):
 
 
     def cutscene(self):
-        # self.screen.fill(BLACK)
-        # self.screen.blit(self.cutscene_image, (0,0))
-        # pygame.display.flip()
+        self.screen.fill(BLUE)
         # self.game_started = True
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
-                 self.running = False
+                #  self.running = False
+                    self.cutscene_on = False
             elif event.type == pygame.QUIT:         
                 self.running = False
 
+        self.sc1.draw(self.screen)
         self.sc1.animate()
         pygame.display.flip()
         
@@ -1645,7 +1683,6 @@ class Game(object):
         self.animate()
         self.xpabrtimer()
 
-        self.sc1.animate()
 
 
     def draw(self):
@@ -1666,13 +1703,9 @@ class Game(object):
         self.rockets.draw(self.screen)
         self.font()
         self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
-
         pygame.display.flip()
 
-        if self.cutscene_on == True:
-
-            self.sc1.draw(self.screen)
-            pygame.display.flip()
+ 
 
 
 
