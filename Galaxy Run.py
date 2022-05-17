@@ -831,9 +831,10 @@ class tkprojectile(pygame.sprite.Sprite):
         self.rect.left += speed
 
 class Cutscene():
-    def __init__(self, image, text,):
+    def __init__(self, image, text, audio):
         self.image = image
-        self.y = 100
+        self.audio = audio
+        self.y = 0
         self.text = text
         self.text_font = pygame.font.Font(None, 72)
         self.text_color = BLACK
@@ -844,10 +845,10 @@ class Cutscene():
         self.textlist = self.text.split("#")
         self.textlist.append(self.text)
         self.letter = self.textlist[self.textindex]
+        self.fulltext = []
+        self.fulltext.append(self.letter)
+        self.talk = True
         self.animate_up = True
-
-        self.next_pos = 0
-
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
 
@@ -855,38 +856,40 @@ class Cutscene():
 
 
     def get_pos(self):
-        if self.y == 200:
+        if self.y == 50:
             self.animate_up = True
-        if self.y == 100:
+        if self.y == 0:
             self.animate_up = False
     
+    def play_audio(self):
+        pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, self.audio)))
+
     def animate(self):
         self.get_pos()
         if self.animate_up == True:
-            self.y = self.y - 1
+            self.y = self.y - 0.5
         elif self.animate_up == False:
-            self.y = self.y + 1
+            self.y = self.y + 0.5
 
-
-
-        if pygame.time.get_ticks() > self.clock_time:
-            self.clock_time = pygame.time.get_ticks() + self.animation_time
-            self.textindex += 1
-            self.next_pos = self.next_pos + 15
-            if self.textindex >= len(self.textlist):
-                self.textindex = 0
-            self.letter = self.textlist[self.textindex]
-            print(self.letter)
+        if self.talk == True:
+            self.play_audio()
+            if pygame.time.get_ticks() > self.clock_time:
+                self.clock_time = pygame.time.get_ticks() + self.animation_time
+                self.textindex += 1
+                if self.textindex >= len(self.textlist) -1:
+                    self.textindex = len(self.textlist) -2
+                    self.talk = False
+                self.letter = self.textlist[self.textindex]
+                self.fulltext.append(self.letter)
+            
         
-
     def draw(self, screen):
-        screen.blit(self.image, (1400, self.y))
+        screen.blit(self.image, (1200, self.y))
         pygame.draw.rect(screen, (WHITE), pygame.Rect(self.text_pos[0] - 10, self.text_pos[1] - 10, 1600, 400))
         pygame.draw.rect(screen, (BLACK), pygame.Rect(self.text_pos[0]- 10, self.text_pos[1] -10, 1600, 400),8)
 
-        test = self.text_font.render(self.letter, 1, (BLACK))
-        screen.blit(test, (self.text_posx + self.next_pos, self.text_posy))
-
+        test = self.text_font.render(" ".join(self.fulltext), 1, (BLACK))
+        screen.blit(test, (self.text_posx, self.text_posy))
 
 
 
@@ -931,7 +934,7 @@ class Game(object):
         self.run_bar = False
         self.cursors = []
         self.cutscene_on = False
-        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'commander.png')),"B#u#y# #P#e#r#f#e#c#t# #H#e#i#s#t# #2")
+        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#", "test_voice.wav")
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -1583,7 +1586,14 @@ class Game(object):
 
 
     def cutscene(self):
-        self.screen.fill(BLUE)
+        #self.screen.fill(BLUE)
+        self.background4.draw(self.screen)
+        self.background3.draw(self.screen)
+        self.background2.draw(self.screen)
+        self.background1.draw(self.screen)
+        self.background0.draw(self.screen)
+        self.player.draw(self.screen)
+        Player.animate(self.player)
         # self.game_started = True
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -1592,9 +1602,9 @@ class Game(object):
                     self.cutscene_on = False
             elif event.type == pygame.QUIT:         
                 self.running = False
-
-        self.sc1.draw(self.screen)
         self.sc1.animate()
+        self.sc1.draw(self.screen)
+        
         pygame.display.flip()
         
                 
@@ -1614,6 +1624,7 @@ class Game(object):
                 self.event_start()
             elif self.cutscene_on == True:
                 self.cutscene()
+                pygame.mouse.set_visible(True)
         pygame.quit()       
 
     def watch_for_events(self):
@@ -1714,3 +1725,6 @@ if __name__ == "__main__":
 
     game = Game()
     game.run()
+
+
+#credit to 15.ai for TTS
