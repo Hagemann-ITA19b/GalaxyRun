@@ -834,7 +834,7 @@ class Cutscene():
     def __init__(self, image, text, audio):
         self.image = image
         self.audio = audio
-        self.y = 0
+        self.y = -100
         self.text = text
         self.text_font = pygame.font.Font(None, 72)
         self.text_color = BLACK
@@ -850,19 +850,22 @@ class Cutscene():
         self.talk = True
         self.animate_up = True
         self.clock_time = pygame.time.get_ticks()
-        self.animation_time = 100
+        self.animation_time = 80
+        self.played_audio = False
 
 
 
 
     def get_pos(self):
-        if self.y == 50:
+        if self.y == -50:
             self.animate_up = True
-        if self.y == 0:
+        if self.y == -100:
             self.animate_up = False
     
-    def play_audio(self):
-        pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, self.audio)))
+    def play_audio(self, audio):
+        if self.played_audio == False and audio == 0:
+            pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, self.audio)))
+            self.played_audio = True
 
     def animate(self):
         self.get_pos()
@@ -872,7 +875,7 @@ class Cutscene():
             self.y = self.y + 0.5
 
         if self.talk == True:
-            self.play_audio()
+            self.play_audio(0)
             if pygame.time.get_ticks() > self.clock_time:
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
                 self.textindex += 1
@@ -884,10 +887,9 @@ class Cutscene():
             
         
     def draw(self, screen):
-        screen.blit(self.image, (1200, self.y))
+        screen.blit(self.image, (800, self.y))
         pygame.draw.rect(screen, (WHITE), pygame.Rect(self.text_pos[0] - 10, self.text_pos[1] - 10, 1600, 400))
         pygame.draw.rect(screen, (BLACK), pygame.Rect(self.text_pos[0]- 10, self.text_pos[1] -10, 1600, 400),8)
-
         test = self.text_font.render(" ".join(self.fulltext), 1, (BLACK))
         screen.blit(test, (self.text_posx, self.text_posy))
 
@@ -906,6 +908,7 @@ class Game(object):
         self.background2 = Background("2.png")
         self.background3 = Background("3.png")
         self.background4 = Background("4.png")
+        self.dimmed_background = Background("dimmed_background.png")
         self.stormtroopers = pygame.sprite.Group()
         self.player = Player("player_standing_R0.png", 5, 100)
         self.tkprojectiles = pygame.sprite.Group()
@@ -934,7 +937,7 @@ class Game(object):
         self.run_bar = False
         self.cursors = []
         self.cutscene_on = False
-        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#", "test_voice.wav")
+        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados2.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#", "test_voice.wav")
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -1554,9 +1557,7 @@ class Game(object):
         Title = Titlefont.render("Galaxy Run", 1, (WHITE))
         self.Startfont = pygame.font.Font(None, 39)
         Start = self.Startfont.render("Start Adventure", 1, (WHITE))
-        
         self.screen.blit(Title, (Settings.window_width // 2 - 150, Settings.window_height // 2 - 100))
-        #pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2 , 200, 100),)
         self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
         self.background0.scroll_r(5)
         self.background1.scroll_r(4)
@@ -1586,20 +1587,17 @@ class Game(object):
 
 
     def cutscene(self):
-        #self.screen.fill(BLUE)
-        self.background4.draw(self.screen)
-        self.background3.draw(self.screen)
-        self.background2.draw(self.screen)
-        self.background1.draw(self.screen)
-        self.background0.draw(self.screen)
+        self.dimmed_background.draw(self.screen)
         self.player.draw(self.screen)
         Player.animate(self.player)
+        self.platforms.draw(self.screen)
         # self.game_started = True
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
                 #  self.running = False
                     self.cutscene_on = False
+                    self.game_started = True
             elif event.type == pygame.QUIT:         
                 self.running = False
         self.sc1.animate()
