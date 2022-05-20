@@ -937,6 +937,7 @@ class Game(object):
         self.running = True
         self.length = 75
         self.game_started = False
+        self.settings_window = False
         self.upgrade_allowed = False
         self.levelup = False
         self.xp = 0
@@ -953,10 +954,12 @@ class Game(object):
                 Settings.path_image, f"crosshair{i}.png"))
             self.cursors.append(bitmap)
         self.imageindex = 0
-        self.colorindex = 0
+        self.colorindex1 = 0
         self.cursor_rect = self.cursors[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
+        self.changing_keybindings = False
+        self.changing_key = None
 
 
 
@@ -1123,10 +1126,10 @@ class Game(object):
         self.colors = [CYAN, MAGENTA]                 #switches between colors
         if pygame.time.get_ticks() > self.clock_time: #
             self.clock_time = pygame.time.get_ticks() #
-            self.colorindex += 1                      #
-        if self.colorindex >= len(self.colors):       #
-            self.colorindex = 0                       #
-        self.color = self.colors[self.colorindex]     #
+            self.colorindex1 += 1                      #
+        if self.colorindex1 >= len(self.colors):       #
+            self.colorindex1 = 0                       #
+        self.color = self.colors[self.colorindex1]     #
 
 
         if self.levelup == True:
@@ -1301,7 +1304,7 @@ class Game(object):
                 self.background3.scroll_l(2 * self.player_speed)
                 self.background4.scroll_l(1 * self.player_speed)
 
-            if keys[pygame.K_d]:
+            if keys [self.walkR_key]:#[pygame.K_d]:
                 self.player.moveR()
                 for s in self.stormtroopers:
                     s.playermove_R(self.player.speed)
@@ -1377,7 +1380,7 @@ class Game(object):
         if figure.rect.top  <= platform.rect.bottom and figure.rect.top >= platform.rect.top:
             if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
                 figure.rect.top = platform.rect.bottom
-                return True
+                #return True
 
     def collide(self):
         for pt in self.platforms:
@@ -1397,49 +1400,7 @@ class Game(object):
             for h in self.healthpacks:
                 if self.check_figure_collision(pt, h):
                     h.on_ground = True
-    # def collide(self):
-        # for pt in self.platforms:
-           
-        #     if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
-        #         if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
-        #             self.player.platform_y = pt.rect.top - 150
-        #             self.player.rect.bottom = pt.rect.top
 
-
-        #     for s in self.stormtroopers:
-        #         if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
-        #             if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-        #                 s.platform_y = pt.rect.top - 150
-        #                 s.rect.bottom = pt.rect.top
-
-        #         if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
-        #             if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-        #                 s.rect.top = pt.rect.bottom
-
-
-        #     for z in self.stormbies:
-        #         if z.rect.bottom >= pt.rect.top and z.rect.bottom <= pt.rect.bottom:
-        #             if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
-        #                 z.platform_y = pt.rect.top - 150
-        #                 z.rect.bottom = pt.rect.top
-
-        #         if z.rect.top  <= pt.rect.bottom and z.rect.top >= pt.rect.top:
-        #             if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
-        #                 z.rect.top = pt.rect.bottom
-
-        #     for a in self.ammocrates:
-        #         if a.rect.bottom >= pt.rect.top and a.rect.bottom <= pt.rect.bottom:
-        #             if a.rect.right  >= pt.rect.left and a.rect.left <= pt.rect.right:
-        #                 a.platform_y = pt.rect.top
-        #                 a.rect.bottom = pt.rect.top
-        #                 a.on_ground = True
-
-        #     for h in self.healthpacks:
-        #         if h.rect.bottom >= pt.rect.top and h.rect.bottom <= pt.rect.bottom:
-        #             if h.rect.right  >= pt.rect.left and h.rect.left <= pt.rect.right:
-        #                 h.platform_y = pt.rect.top
-        #                 h.rect.bottom = pt.rect.top
-        #                 h.on_ground = True
 
     def countdown(time_sec): #FÜR SPÄTER
         while time_sec:
@@ -1453,9 +1414,6 @@ class Game(object):
         if jumping == False:
             self.get_pos()
             self.player.rect.top += 10
-
-            if self.player.rect.top >= 7770:#570:
-                self.player.rect.top = 7770
             
         for s in self.stormtroopers:
             s.rect.top += 10
@@ -1496,7 +1454,7 @@ class Game(object):
             else:
                 s.getting_hit = False
 
-        if self.player.rect.top >= 570:
+        if self.player.rect.top >= 720:
             self.player.kill()
             self.player.health = self.player.health - 3
 
@@ -1586,35 +1544,133 @@ class Game(object):
         self.background1.draw(self.screen)
         self.background0.draw(self.screen)
         Title = Titlefont.render("Galaxy Run", 1, (WHITE))
-        self.Startfont = pygame.font.Font(None, 39)
-        Start = self.Startfont.render("Start Adventure", 1, (WHITE))
+  
+        self.fontcolor = [WHITE, BLUE]
         self.screen.blit(Title, (Settings.window_width // 2 - 150, Settings.window_height // 2 - 100))
-        self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
+
         self.background0.scroll_r(5)
         self.background1.scroll_r(4)
         self.background2.scroll_r(3)
         self.background3.scroll_r(2)
         self.background4.scroll_r(1)
+        mouse = pygame.mouse.get_pos()
+
+
+
+        if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100:
+            if self.fontmultiplier1 == 0:
+                self.multiply_font1 = True
+                self.colorindex1 = self.colorindex1 + 1
+
+            if self.fontmultiplier1 == 20:
+                self.multiply_font1 = False
+
+            if self.multiply_font1 == True:
+                self.fontmultiplier1 = self.fontmultiplier1 + 1
+
+            if self.multiply_font1 == False:
+                self.fontmultiplier1 = self.fontmultiplier1 - 1
+
+            if self.colorindex1 >= len(self.fontcolor):
+                self.colorindex1 = 0
+
+        else:
+            self.multiply_font1 = False
+            self.fontmultiplier1 = 1
+
+            self.colorindex1 = 0
+
+
+
+        if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 +100 <= mouse[1] <= Settings.window_height // 2 + 200:
+            if self.fontmultiplier2 == 0:
+                self.multiply_font2 = True
+                self.colorindex2 = self.colorindex2 + 1
+
+            if self.fontmultiplier2 == 20:
+                self.multiply_font2 = False
+
+            if self.multiply_font2 == True:
+                self.fontmultiplier2 = self.fontmultiplier2 + 1
+
+            if self.multiply_font2 == False:
+                self.fontmultiplier2 = self.fontmultiplier2 - 1
+
+            if self.colorindex2 >= len(self.fontcolor):
+                self.colorindex2 = 0
+
+        else:
+            self.multiply_font2 = False
+            self.fontmultiplier2 = 1
+
+            self.colorindex2 = 0
+
+
+
+        if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 + 200 <= mouse[1] <= Settings.window_height // 2 + 400:
+            if self.fontmultiplier3 == 0:
+                self.multiply_font3 = True
+                self.colorindex3 = self.colorindex3 + 1
+
+            if self.fontmultiplier3 == 20:
+                self.multiply_font3 = False
+
+            if self.multiply_font3 == True:
+                self.fontmultiplier3 = self.fontmultiplier3 + 1
+
+            if self.multiply_font3 == False:
+                self.fontmultiplier3 = self.fontmultiplier3 - 1
+
+            if self.colorindex3 >= len(self.fontcolor):
+                self.colorindex3 = 0
+
+        else:
+            self.multiply_font3 = False
+            self.fontmultiplier3 = 1
+
+            self.colorindex3 = 0
+
+        self.Button1Font = pygame.font.Font(None, 39 + self.fontmultiplier1)
+        Start = self.Button1Font.render("Start Adventure", 1, (self.fontcolor[self.colorindex1]))
+        self.screen.blit(Start, ((Settings.window_width // 2 -110) - self.fontmultiplier1*2,Settings.window_height // 2 + 30))
+
+        self.Button2Font = pygame.font.Font(None, 39 + self.fontmultiplier2)
+        Endless = self.Button2Font.render("Endless Mode", 1, (self.fontcolor[self.colorindex2]))
+        self.screen.blit(Endless, ((Settings.window_width // 2 -100) - self.fontmultiplier2*2,Settings.window_height // 2 + 130))
+
+        self.Button3Font = pygame.font.Font(None, 39 + self.fontmultiplier3)
+        Keybindings = self.Button3Font.render("Settings", 1, (self.fontcolor[self.colorindex3]))
+        self.screen.blit(Keybindings, ((Settings.window_width // 2 -70) - self.fontmultiplier3*1.5,Settings.window_height // 2 + 230))
+
+
+
         pygame.display.flip()
+        
+
 
     def event_start(self):
         mouse = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
+                
                 if event.key == pygame.K_ESCAPE:    
                         self.running = False
+
                 elif event.type == pygame.QUIT:         
                     self.running = False
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100:
                     self.game_started = True
                     print("Starting...")
-        if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100: #bugged
-                pygame.draw.rect(self.screen, (0,0,255), pygame.Rect(Settings.window_width // 2 - 100,Settings.window_height // 2 , 200, 100),)
-                self.Startfont = pygame.font.Font(None, 100)
-                Start = self.Startfont.render("Start Adventure", 1, (BLACK))
-                self.screen.blit(Start, (Settings.window_width // 2 - 100,Settings.window_height // 2 + 30))
-                pygame.display.flip()
+                if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 +100 <= mouse[1] <= Settings.window_height // 2 + 200:
+                    print("Endless mode")
+                if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 + 200 <= mouse[1] <= Settings.window_height // 2 + 400:
+                    print("Settings")
+                    self.settings_window = True
+
+                    
+
 
 
     def cutscene(self, scene):
@@ -1635,6 +1691,72 @@ class Game(object):
 
         
         pygame.display.flip()
+
+
+    # def event_settings(self):
+        
+    #     mouse = pygame.mouse.get_pos()
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.KEYDOWN:
+    #             print(pygame.key.name(event.key))
+    #             if event.key == pygame.K_ESCAPE: 
+    #                 self.running = False
+                    
+
+
+
+    # Settings Buttons
+    def draw_buttons_settings(self, x, y, text, color):
+
+
+
+        pygame.draw.rect(self.screen, color, (x, y, 100, 30))
+        self.ButtonFont = pygame.font.Font(None, 39)
+        Button = self.ButtonFont.render(text, 1, (BLACK))
+        self.screen.blit(Button, (x,y))
+
+
+
+
+    def button_logic(self):
+        mouse = pygame.mouse.get_pos()
+        for event in pygame.event.get():
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if 100 <= mouse[0] <= 100 + 100 and 300 <= mouse[1] <= 300 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "walk_right"
+                if 1000 <= mouse[0] <= 1000 + 100 and 300 <= mouse[1] <= 300 + 30:
+                    print("Button pressed", 1000, 300)
+
+
+            if self.changing_keybindings == True:
+                if event.type == pygame.KEYDOWN:
+                    if self.changing_key == "walk_right":
+                        self.key = pygame.key.name(event.key)
+                        self.walkR_key = pygame.key.key_code(self.key)
+                        print(self.walkR_key)
+                        self.changing_keybindings = False
+
+
+
+
+            if event.type == pygame.KEYDOWN:
+                #print(pygame.key.name(event.key))
+                if event.key == pygame.K_ESCAPE: 
+                    self.settings_window = False
+                    
+
+
+    def check_buttons(self):
+        self.button_logic()
+        self.draw_buttons_settings(100, 300, "walk R", CYAN)
+        self.draw_buttons_settings(1000, 300, "test2", RED)
+        
+        
+        pygame.display.flip()
+
+
         
                 
 
@@ -1647,13 +1769,20 @@ class Game(object):
                 self.draw()
                 self.get_cursor_center()
                 pygame.mouse.set_visible(False)
-            elif self.game_started == False and self.cutscene_on == False:
+            elif self.game_started == False and self.cutscene_on == False and self.settings_window == False:
                 pygame.mouse.set_visible(True)
                 self.draw_start()
                 self.event_start()
+                
             elif self.cutscene_on == True:
                 self.cutscene(1)
                 pygame.mouse.set_visible(True)
+
+            elif self.settings_window == True:
+                self.screen.fill(BLUE)
+                pygame.mouse.set_visible(True)
+                
+                self.check_buttons()
         pygame.quit()       
 
     def watch_for_events(self):
@@ -1664,7 +1793,7 @@ class Game(object):
                 self.mx, self.my = pygame.mouse.get_pos()
                 self.midclick()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:    
+                if event.key == pygame.K_ESCAPE: 
                     self.running = False
                 if event.key == pygame.K_SPACE:
                     jumping = True
