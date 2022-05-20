@@ -834,7 +834,7 @@ class Cutscene():
     def __init__(self, image, text, audio):
         self.image = image
         self.audio = audio
-        self.y = -100
+        self.y = -420
         self.text = text
         self.text_font = pygame.font.Font(None, 72)
         self.text_color = BLACK
@@ -852,6 +852,7 @@ class Cutscene():
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 80
         self.played_audio = False
+        self.dropped_down = False
 
 
 
@@ -868,22 +869,31 @@ class Cutscene():
             self.played_audio = True
 
     def animate(self):
-        self.get_pos()
-        if self.animate_up == True:
-            self.y = self.y - 0.5
-        elif self.animate_up == False:
-            self.y = self.y + 0.5
+        
+        if self.dropped_down == False:
+            if self.y < -100:
+                self.y += 5
+            if self.y == -100:
+                self.dropped_down = True
 
-        if self.talk == True:
-            self.play_audio(0)
-            if pygame.time.get_ticks() > self.clock_time:
-                self.clock_time = pygame.time.get_ticks() + self.animation_time
-                self.textindex += 1
-                if self.textindex >= len(self.textlist) -1:
-                    self.textindex = len(self.textlist) -2
-                    self.talk = False
-                self.letter = self.textlist[self.textindex]
-                self.fulltext.append(self.letter)
+        if self.dropped_down == True:
+            self.get_pos()
+            if self.animate_up == True:
+                self.y = self.y - 0.5
+            elif self.animate_up == False:
+                self.y = self.y + 0.5
+
+
+            if self.talk == True:
+                self.play_audio(0)
+                if pygame.time.get_ticks() > self.clock_time:
+                    self.clock_time = pygame.time.get_ticks() + self.animation_time
+                    self.textindex += 1
+                    if self.textindex >= len(self.textlist) -1:
+                        self.textindex = len(self.textlist) -2
+                        self.talk = False
+                    self.letter = self.textlist[self.textindex]
+                    self.fulltext.append(self.letter)
             
         
     def draw(self, screen):
@@ -1358,57 +1368,78 @@ class Game(object):
         self.player.rect.y = 300
         pygame.mixer.music.rewind()
 
+    def check_figure_collision(self, platform, figure, platform_offset=0):
+        if figure.rect.bottom >= platform.rect.top and figure.rect.bottom <= platform.rect.bottom:
+            if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
+                figure.platform_y = platform.rect.top - 150
+                figure.rect.bottom = platform.rect.top
+
+        if figure.rect.top  <= platform.rect.bottom and figure.rect.top >= platform.rect.top:
+            if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
+                figure.rect.top = platform.rect.bottom
+                return True
 
     def collide(self):
         for pt in self.platforms:
-           
-            if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
-                if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
-                    self.player.platform_y = pt.rect.top - 150
-                    self.player.rect.bottom = pt.rect.top
-                    #self.player.on_ground = True
-                # else:
-                #     self.player.platform_y = 570
-
-            # if self.player.rect.top  <= pt.rect.bottom and self.player.rect.top >= pt.rect.top:
-            #     if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
-            #         self.player.rect.top = pt.rect.bottom
-            #         self.player.on_ground = True
+            self.check_figure_collision(pt, self.player, platform_offset=150)
 
             for s in self.stormtroopers:
-                if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
-                    if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-                        s.platform_y = pt.rect.top - 150
-                        s.rect.bottom = pt.rect.top
-
-                if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
-                    if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
-                        s.rect.top = pt.rect.bottom
+                self.check_figure_collision(pt, s, 150)
 
 
             for z in self.stormbies:
-                if z.rect.bottom >= pt.rect.top and z.rect.bottom <= pt.rect.bottom:
-                    if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
-                        z.platform_y = pt.rect.top - 150
-                        z.rect.bottom = pt.rect.top
-
-                if z.rect.top  <= pt.rect.bottom and z.rect.top >= pt.rect.top:
-                    if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
-                        z.rect.top = pt.rect.bottom
+                self.check_figure_collision(pt, z, 150)
 
             for a in self.ammocrates:
-                if a.rect.bottom >= pt.rect.top and a.rect.bottom <= pt.rect.bottom:
-                    if a.rect.right  >= pt.rect.left and a.rect.left <= pt.rect.right:
-                        a.platform_y = pt.rect.top
-                        a.rect.bottom = pt.rect.top
-                        a.on_ground = True
+                if self.check_figure_collision(pt, a):
+                    a.on_ground = True
 
             for h in self.healthpacks:
-                if h.rect.bottom >= pt.rect.top and h.rect.bottom <= pt.rect.bottom:
-                    if h.rect.right  >= pt.rect.left and h.rect.left <= pt.rect.right:
-                        h.platform_y = pt.rect.top
-                        h.rect.bottom = pt.rect.top
-                        h.on_ground = True
+                if self.check_figure_collision(pt, h):
+                    h.on_ground = True
+    # def collide(self):
+        # for pt in self.platforms:
+           
+        #     if self.player.rect.bottom >= pt.rect.top and self.player.rect.bottom <= pt.rect.bottom:
+        #         if self.player.rect.right  >= pt.rect.left and self.player.rect.left <= pt.rect.right:
+        #             self.player.platform_y = pt.rect.top - 150
+        #             self.player.rect.bottom = pt.rect.top
+
+
+        #     for s in self.stormtroopers:
+        #         if s.rect.bottom >= pt.rect.top and s.rect.bottom <= pt.rect.bottom:
+        #             if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
+        #                 s.platform_y = pt.rect.top - 150
+        #                 s.rect.bottom = pt.rect.top
+
+        #         if s.rect.top  <= pt.rect.bottom and s.rect.top >= pt.rect.top:
+        #             if s.rect.right  >= pt.rect.left and s.rect.left <= pt.rect.right:
+        #                 s.rect.top = pt.rect.bottom
+
+
+        #     for z in self.stormbies:
+        #         if z.rect.bottom >= pt.rect.top and z.rect.bottom <= pt.rect.bottom:
+        #             if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
+        #                 z.platform_y = pt.rect.top - 150
+        #                 z.rect.bottom = pt.rect.top
+
+        #         if z.rect.top  <= pt.rect.bottom and z.rect.top >= pt.rect.top:
+        #             if z.rect.right  >= pt.rect.left and z.rect.left <= pt.rect.right:
+        #                 z.rect.top = pt.rect.bottom
+
+        #     for a in self.ammocrates:
+        #         if a.rect.bottom >= pt.rect.top and a.rect.bottom <= pt.rect.bottom:
+        #             if a.rect.right  >= pt.rect.left and a.rect.left <= pt.rect.right:
+        #                 a.platform_y = pt.rect.top
+        #                 a.rect.bottom = pt.rect.top
+        #                 a.on_ground = True
+
+        #     for h in self.healthpacks:
+        #         if h.rect.bottom >= pt.rect.top and h.rect.bottom <= pt.rect.bottom:
+        #             if h.rect.right  >= pt.rect.left and h.rect.left <= pt.rect.right:
+        #                 h.platform_y = pt.rect.top
+        #                 h.rect.bottom = pt.rect.top
+        #                 h.on_ground = True
 
     def countdown(time_sec): #FÜR SPÄTER
         while time_sec:
@@ -1586,22 +1617,22 @@ class Game(object):
                 pygame.display.flip()
 
 
-    def cutscene(self):
+    def cutscene(self, scene):
         self.dimmed_background.draw(self.screen)
         self.player.draw(self.screen)
         Player.animate(self.player)
         self.platforms.draw(self.screen)
-        # self.game_started = True
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:    
-                #  self.running = False
                     self.cutscene_on = False
                     self.game_started = True
             elif event.type == pygame.QUIT:         
                 self.running = False
-        self.sc1.animate()
-        self.sc1.draw(self.screen)
+        if scene == 1:
+            self.sc1.animate()
+            self.sc1.draw(self.screen)
+
         
         pygame.display.flip()
         
@@ -1621,7 +1652,7 @@ class Game(object):
                 self.draw_start()
                 self.event_start()
             elif self.cutscene_on == True:
-                self.cutscene()
+                self.cutscene(1)
                 pygame.mouse.set_visible(True)
         pygame.quit()       
 
