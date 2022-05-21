@@ -946,20 +946,32 @@ class Game(object):
         self.current_xp = 0
         self.passed_bartime = 0
         self.run_bar = False
-        self.cursors = []
+        self.images = []
         self.cutscene_on = False
         self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados2.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#", "test_voice.wav")
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
-            self.cursors.append(bitmap)
+            self.images.append(bitmap)
         self.imageindex = 0
         self.colorindex1 = 0
-        self.cursor_rect = self.cursors[self.imageindex].get_rect()
+        self.cursor_rect = self.images[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
+
+        # for controls
         self.changing_keybindings = False
         self.changing_key = None
+        self.walkR_key = pygame.K_d
+        self.walkL_key = pygame.K_a
+        self.jump_key = pygame.K_SPACE
+        self.shoot_key = pygame.K_x
+        self.sprint_key = pygame.K_LSHIFT
+        self.pause_key = pygame.K_p
+        self.jetpack_key = pygame.K_w
+        self.image = pygame.image.load(os.path.join(Settings.path_image, 'glados2.png'))
+
+
 
 
 
@@ -967,9 +979,9 @@ class Game(object):
             if pygame.time.get_ticks() > self.clock_time:
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
                 self.imageindex += 1
-                if self.imageindex >= len(self.cursors):
+                if self.imageindex >= len(self.images):
                     self.imageindex = 0
-                self.cursor = self.cursors[self.imageindex]
+                self.image = self.images[self.imageindex]
     def sector_up(self):
         global score_value
         self.spawncount = round(score_value)%10
@@ -1282,7 +1294,7 @@ class Game(object):
             elif self.player.speed == 10:
                 self.player_speed = 2
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]: 
+            if keys [self.walkL_key]:#[pygame.K_a]: 
                 self.player.moveL()
                 for s in self.stormtroopers:
                     s.playermove_L(self.player.speed)
@@ -1325,18 +1337,16 @@ class Game(object):
                 self.background2.scroll_r(3 * self.player_speed)
                 self.background3.scroll_r(2 * self.player_speed)
                 self.background4.scroll_r(1 * self.player_speed)
-            if keys[pygame.K_LSHIFT]:
+            if keys[self.sprint_key]:
                 self.player.sprinting = True
                 self.player.sprint()
             else:
                 self.player.walk()
-            if keys[pygame.K_w]:
+            if keys[self.jetpack_key]:
                 self.player.moveUp()
             if keys[pygame.K_r]:
                 self.restart()
-            if keys[pygame.K_p]:
-                self.game_started = False
-                self.cutscene_on = True
+
                 
     def restart(self):
         global bullets, fuel, score_value, lives, spawncount, count, level
@@ -1662,6 +1672,11 @@ class Game(object):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 <= mouse[1] <= Settings.window_height // 2 + 100:
                     self.game_started = True
+                    self.images.clear()
+                    for i in range(2):
+                        bitmap = pygame.image.load(os.path.join(
+                            Settings.path_image, f"crosshair{i}.png"))
+                        self.images.append(bitmap)
                     print("Starting...")
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 +100 <= mouse[1] <= Settings.window_height // 2 + 200:
                     print("Endless mode")
@@ -1693,27 +1708,72 @@ class Game(object):
         pygame.display.flip()
 
 
-    # def event_settings(self):
-        
-    #     mouse = pygame.mouse.get_pos()
-    #     for event in pygame.event.get():
-    #         if event.type == pygame.KEYDOWN:
-    #             print(pygame.key.name(event.key))
-    #             if event.key == pygame.K_ESCAPE: 
-    #                 self.running = False
-                    
-
-
 
     # Settings Buttons
-    def draw_buttons_settings(self, x, y, text, color):
-
-
-
+    def draw_buttons_settings(self, x, y, text, color, key):
         pygame.draw.rect(self.screen, color, (x, y, 100, 30))
-        self.ButtonFont = pygame.font.Font(None, 39)
+        self.ButtonFont = pygame.font.Font(None, 30)
         Button = self.ButtonFont.render(text, 1, (BLACK))
+        Control_key = self.ButtonFont.render(key, 1, (BLACK))
+        self.screen.blit(Control_key, (x + 200,y))
         self.screen.blit(Button, (x,y))
+    
+    def preview_settings(self, screen):
+        
+        if self.changing_key == "walk_right":
+            self.images.clear()
+            for i in range(7):
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"player_walking_R{i}.png"))
+                scaled = pygame.transform.scale(bitmap, (200, 250))
+                self.images.append(scaled)
+
+        if self.changing_key == "walk_left":
+            self.images.clear()
+            for i in range(7):
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"player_walking_L{i}.png"))
+                scaled = pygame.transform.scale(bitmap, (200, 250))
+                self.images.append(scaled)
+
+        if self.changing_key == "jump":
+            self.images.clear()
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"jumpR.png"))
+            scaled = pygame.transform.scale(bitmap, (200, 250))
+            self.images.append(scaled)
+
+        # if self.changing_key == "shoot":
+        #     self.images.clear()
+        #     bitmap = pygame.image.load(os.path.join(
+        #         Settings.path_image, f"shootR.png"))
+        #     scaled = pygame.transform.scale(bitmap, (200, 250))
+        #     self.images.append(scaled)
+        
+        if self.changing_key == "jetpack":
+            self.images.clear()
+            for i in range (2):
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"jetpack_R{i}.png"))
+                scaled = pygame.transform.scale(bitmap, (200, 250))
+                self.images.append(scaled)
+
+        if self.changing_key == "sprint":
+            self.images.clear()
+            for i in range (7):
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"player_sprinting_R{i}.png"))
+                scaled = pygame.transform.scale(bitmap, (200, 250))
+                self.images.append(scaled)
+            self.animation_time = 50
+        else:
+            self.animation_time = 100
+        self.animate()
+        
+        screen.blit(self.image, (1000, 300))
+
+
+   
 
 
 
@@ -1723,26 +1783,63 @@ class Game(object):
         for event in pygame.event.get():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if 100 <= mouse[0] <= 100 + 100 and 300 <= mouse[1] <= 300 + 30:
+                if 400 <= mouse[0] <= 400 + 100 and 200 <= mouse[1] <= 200 + 30:
                     self.changing_keybindings = True
                     self.changing_key = "walk_right"
-                if 1000 <= mouse[0] <= 1000 + 100 and 300 <= mouse[1] <= 300 + 30:
-                    print("Button pressed", 1000, 300)
+                if 400 <= mouse[0] <= 400 + 100 and 250 <= mouse[1] <= 250 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "walk_left"
+                if 400 <= mouse[0] <= 400 + 100 and 300 <= mouse[1] <= 300 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "jump"
+                if 400 <= mouse[0] <= 400 + 100 and 350 <= mouse[1] <= 350 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "sprint"
+                if 400 <= mouse[0] <= 400 + 100 and 400 <= mouse[1] <= 400 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "jetpack"
+                if 400 <= mouse[0] <= 400 + 100 and 450 <= mouse[1] <= 450 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "pause"
+                if 400 <= mouse[0] <= 400 + 100 and 500 <= mouse[1] <= 500 + 30:
+                    self.changing_keybindings = True
+                    self.changing_key = "shoot"
 
-
+                
             if self.changing_keybindings == True:
                 if event.type == pygame.KEYDOWN:
                     if self.changing_key == "walk_right":
-                        self.key = pygame.key.name(event.key)
-                        self.walkR_key = pygame.key.key_code(self.key)
+                        self.walkR_key = pygame.key.key_code(pygame.key.name(event.key))
                         print(self.walkR_key)
                         self.changing_keybindings = False
-
-
+                    if self.changing_key == "walk_left":
+                        self.walkL_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.walkL_key)
+                        self.changing_keybindings = False
+                    if self.changing_key == "jump":
+                        self.jump_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.jump_key)
+                        self.changing_keybindings = False
+                    if self.changing_key == "shoot":
+                        self.shoot_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.shoot_key)
+                        self.changing_keybindings = False
+                    if self.changing_key == "pause":
+                        self.pause_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.pause_key)
+                        self.changing_keybindings = False
+                    if self.changing_key == "jetpack":
+                        self.jetpack_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.jetpack_key)
+                        self.changing_keybindings = False
+                    if self.changing_key == "sprint":
+                        self.sprint_key = pygame.key.key_code(pygame.key.name(event.key))
+                        print(self.sprint_key)
+                        self.changing_keybindings = False
+                    
 
 
             if event.type == pygame.KEYDOWN:
-                #print(pygame.key.name(event.key))
                 if event.key == pygame.K_ESCAPE: 
                     self.settings_window = False
                     
@@ -1750,9 +1847,13 @@ class Game(object):
 
     def check_buttons(self):
         self.button_logic()
-        self.draw_buttons_settings(100, 300, "walk R", CYAN)
-        self.draw_buttons_settings(1000, 300, "test2", RED)
-        
+        self.draw_buttons_settings(400, 200, "walk right", CYAN, pygame.key.name(self.walkR_key))
+        self.draw_buttons_settings(400, 250, "walk left", RED, pygame.key.name(self.walkL_key))
+        self.draw_buttons_settings(400, 300, "jump", GREEN, pygame.key.name(self.jump_key))
+        self.draw_buttons_settings(400, 350, "sprint", MAGENTA, pygame.key.name(self.sprint_key))
+        self.draw_buttons_settings(400, 500, "shoot", BLUE, pygame.key.name(self.shoot_key))
+        self.draw_buttons_settings(400, 400, "jetpack", PURP, pygame.key.name(self.jetpack_key))
+        self.draw_buttons_settings(400, 450, "pause", YELLOW, pygame.key.name(self.pause_key))
         
         pygame.display.flip()
 
@@ -1781,7 +1882,7 @@ class Game(object):
             elif self.settings_window == True:
                 self.screen.fill(BLUE)
                 pygame.mouse.set_visible(True)
-                
+                self.preview_settings(self.screen)
                 self.check_buttons()
         pygame.quit()       
 
@@ -1793,9 +1894,9 @@ class Game(object):
                 self.mx, self.my = pygame.mouse.get_pos()
                 self.midclick()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE: 
-                    self.running = False
-                if event.key == pygame.K_SPACE:
+                if event.key == self.pause_key: 
+                    self.game_started = False
+                if event.key == self.jump_key:
                     jumping = True
                 if event.key == pygame.K_q:
                     self.player.change_previous_weapon()
@@ -1871,7 +1972,7 @@ class Game(object):
         self.flames.draw(self.screen)
         self.rockets.draw(self.screen)
         self.font()
-        self.screen.blit(self.cursor,self.cursor_rect) # draw the cursor
+        self.screen.blit(self.image,self.cursor_rect) # draw the cursor
         pygame.display.flip()
 
  
