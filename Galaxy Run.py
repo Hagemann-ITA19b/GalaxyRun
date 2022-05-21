@@ -1,5 +1,6 @@
 from datetime import datetime
 from posixpath import split
+from queue import Empty
 import pygame
 import os
 from random import randint
@@ -63,18 +64,62 @@ class Settings(object):
 
 mixer.init()
 pygame. mixer.init()
-blaster_sound = pygame. mixer. Sound(os.path.join(Settings.path_image, "blaster.wav"))
-refill_sound = pygame. mixer. Sound(os.path.join(Settings.path_image, "refill.mp3"))
-jetpack_sound = pygame. mixer. Sound(os.path.join(Settings.path_image, "jetpack.wav"))
-darksaber_sound = pygame. mixer. Sound(os.path.join(Settings.path_image, "darksaber.wav"))
+
 
   
 mixer.music.load(os.path.join(Settings.path_image, "Soundtrack.mp3"))
   
 
-pygame.mixer.music.set_volume(0.4)
+pygame.mixer.music.set_volume(0.01)
 mixer.music.play()
 
+class Sounds(object):
+    blaster_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "blaster.wav"))
+    blaster_sound.set_volume(0.01)
+    refill_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "refill.mp3"))
+    refill_sound.set_volume(0.01)
+    jetpack_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "jetpack.wav"))
+    jetpack_sound.set_volume(0.01)
+    shield_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "darksaber.wav"))
+    shield_sound.set_volume(0.01)
+    explosion_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "explosion.wav"))
+    explosion_sound.set_volume(0.01)
+    shields_low = pygame.mixer.Sound(os.path.join(Settings.path_image, "shields_low.mp3"))
+    shields_low.set_volume(0.1)
+    tk_blast = pygame.mixer.Sound(os.path.join(Settings.path_image, "tkblast.mp3"))
+    tk_blast.set_volume(0.01)
+    empty_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "empty.wav"))
+    empty_sound.set_volume(0.01)
+    rocket_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "rocket_fire.wav"))
+    rocket_sound.set_volume(0.01)
+    player_hit = pygame.mixer.Sound(os.path.join(Settings.path_image, "hurt.wav"))
+    player_hit.set_volume(0.01)
+
+    def play_sound(sound):
+        if sound == "blaster":
+            pygame.mixer.Channel(1).play(Sounds.blaster_sound)
+        if sound == "refill":
+            pygame.mixer.Channel(2).play(Sounds.refill_sound)
+        if sound == "explosion":
+            pygame.mixer.Channel(3).play(Sounds.explosion_sound)
+        if sound == "shields_low":
+            pygame.mixer.Channel(4).play(Sounds.shields_low)
+        if sound == "tk_blast":
+            pygame.mixer.Channel(5).play(Sounds.tk_blast)
+        if sound == "empty":
+            pygame.mixer.Channel(6).play(Sounds.empty_sound)
+        if sound == "rocket":
+            pygame.mixer.Channel(7).play(Sounds.rocket_sound)
+        if sound == "player_hit":
+            pygame.mixer.Channel(0).play(Sounds.player_hit)
+        if sound == "jetpack":
+            pygame.mixer.Channel(7).play(Sounds.jetpack_sound)
+        if sound == "shield_hit":
+            pygame.mixer.Channel(0).play(Sounds.shield_sound)
+        if sound == "jetpack":
+            pygame.mixer.Channel(0).play(Sounds.jetpack_sound)
+
+    
 
 
 class Background():
@@ -418,8 +463,7 @@ class Player(pygame.sprite.Sprite):
         global fuel
         Player.get_pos(self)
         if fuel > 0:
-            pygame.mixer.unpause()
-            jetpack_sound.play()
+            Sounds.play_sound("jetpack")
             if self.rect.top <= 570: 
                 # if self.rect.top >= 1:
                     self.rect.top = self.rect.top - 13
@@ -437,10 +481,7 @@ class Player(pygame.sprite.Sprite):
                             self.images.append(bitmap)
                     self.usefuel = True
                     fuel -= 1
-
-                    if fuel <= 0:
-                        pygame.mixer.pause()
-
+                      
                        
     def block(self):
         if self.energypoints > 0 and self.refilling == False:
@@ -470,13 +511,13 @@ class Player(pygame.sprite.Sprite):
 
         if self.energypoints <= 0:
             if self.playing_shieldlow == False:
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'shields_low.mp3')))
+                Sounds.play_sound("shields_low")
                 self.playing_shieldlow = True
             Game.timer(self)
         if self.passed_time >= 420:
             self.refilling = True
             if self.playing_shieldrefill == False:
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'refill.mp3')))
+                Sounds.play_sound('refill')
                 self.playing_shieldrefill = True
             self.energypoints = self.energypoints + 0.5 #0.25
             if self.energypoints >= 75:
@@ -768,7 +809,7 @@ class Rocket(pygame.sprite.Sprite):
     def explode(self):
         
         self.exploding = True
-        pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'explosion.wav')))
+        Sounds.play_sound("explosion")
         self.images.clear()
         for i in range(5):
             bitmap = pygame.image.load(os.path.join(
@@ -903,7 +944,9 @@ class Cutscene():
         if audio == 3:
             audio = self.audio3
         if self.played_audio == False:
-            pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, audio)))
+            playing_audio =pygame.mixer.Sound(os.path.join(Settings.path_image, audio))
+            playing_audio.set_volume(0.01)
+            pygame.mixer.Channel(0).play(playing_audio)
             self.played_audio = True
 
     def animate(self):
@@ -1242,17 +1285,18 @@ class Game(object):
             if bullets >= 1 and self.player.weapons_index == 0:
                 bullets -= 1
                 self.projectiles.add(projectile("bullet0.png",self.mx ,self.my))
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'blaster.wav')))
+            
+                Sounds.play_sound("blaster")
             elif bullets <= 0 and self.player.weapons_index == 0:
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
+                Sounds.play_sound("empty")
             
             if self.player.rockets >= 1 and self.player.weapons_index == 1:
                 self.player.rockets = self.player.rockets - 1
                 self.rockets.add(Rocket("rocket0.png",self.mx ,self.my))
                 print(self.mx, self.my)
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'rocket_fire.wav')))
+                Sounds.play_sound("rocket")
             elif self.player.rockets <= 0 and self.player.weapons_index == 1:
-                pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'empty.wav')))
+                Sounds.play_sound("empty")
     
 
     def shoot_dice(self):
@@ -1261,7 +1305,7 @@ class Game(object):
             if shoot_dice == s.trigger and s.getting_hit == False:
                 Settings.bullet_size = (100, 15)
                 self.tkprojectiles.add(tkprojectile("tkbullet0.png", s.facing,s.tkposy + 80,s.tkposx -50))
-                pygame.mixer.Channel(4).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'tkblast.mp3')))
+                Sounds.play_sound("tk_blast")
 
                 
     def leftclick(self):
@@ -1545,11 +1589,11 @@ class Game(object):
                     self.player.get_invincible()
                     self.player.health = self.player.health - 1
                     
-                    pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'hurt.wav')))
+                    Sounds.play_sound("player_hit")
                     if self.player.health <= 0:
                         self.player.kill()
                 if self.player.shield == True:
-                        pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'darksaber.wav')))
+                        Sounds.play_sound("shield_hit")
         
         if pygame.sprite.spritecollide(self.player, self.rockets, False) :
             for r in self.rockets:
@@ -1565,7 +1609,7 @@ class Game(object):
                 if self.player.invincible == False:
                     self.player.get_invincible()
                     self.player.health = self.player.health - 1
-                    pygame.mixer.Channel(7).play(pygame.mixer.Sound(os.path.join(Settings.path_image, 'hurt.wav')))
+                    Sounds.play_sound("player_hit")
         
     
     def reward(self):
