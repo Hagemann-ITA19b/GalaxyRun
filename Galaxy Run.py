@@ -323,6 +323,7 @@ class Player(pygame.sprite.Sprite):
         self.weapons_index -= 1
         if self.weapons_index < 0:
             self.weapons_index = len(self.weapons) - 1
+
     def get_invincible(self):
         self.invincible = True
         self.run_inv = True
@@ -831,12 +832,20 @@ class tkprojectile(pygame.sprite.Sprite):
         self.rect.left += speed
 
 class Cutscene():
-    def __init__(self, image, text, audio):
+    def __init__(self, image, text, text2, text3, addedtext, audio, audio2, audio3, texttime1, texttime2, texttime3):
         self.image = image
         self.audio = audio
+        self.audio2 = audio2
+        self.audio3 = audio3
+        self.texttime1 = texttime1
+        self.texttime2 = texttime2
+        self.texttime3 = texttime3
         self.y = -420
         self.text = text
-        self.text_font = pygame.font.Font(None, 72)
+        self.text2 = text2
+        self.text3 = text3
+        self.addedtext = addedtext
+        self.text_font = pygame.font.Font(None, 30)
         self.text_color = BLACK
         self.text_pos = (10, 600)
         self.text_posx = 10
@@ -850,12 +859,35 @@ class Cutscene():
         self.talk = True
         self.animate_up = True
         self.clock_time = pygame.time.get_ticks()
-        self.animation_time = 80
+        self.animation_time = self.texttime1
         self.played_audio = False
         self.dropped_down = False
+        self.spokentext = 1
+        self.which_audio = 1
+        self.end_cutscene = False
 
+    def next_phrase(self):
+        if self.talk == False and self.spokentext < self.addedtext:
+            self.fulltext.clear()
+            self.textindex = 0
+            if self.spokentext == 1:
+                self.textlist = self.text2.split("#")
+                self.textlist.append(self.text2)
+                self.animation_time = self.texttime2
+            elif self.spokentext == 2:
+                self.textlist = self.text3.split("#")
+                self.textlist.append(self.text3)
+                self.animation_time = self.texttime3
+            self.which_audio = self.which_audio + 1
+            self.played_audio = False
+            self.talk = True
+            self.spokentext = self.spokentext + 1
 
+        if self.spokentext == self.addedtext and self.talk == False:
+            self.end_cutscene = True
 
+            
+            
 
     def get_pos(self):
         if self.y == -50:
@@ -864,12 +896,17 @@ class Cutscene():
             self.animate_up = False
     
     def play_audio(self, audio):
-        if self.played_audio == False and audio == 0:
-            pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, self.audio)))
+        if audio == 1:
+            audio = self.audio
+        if audio == 2:
+            audio = self.audio2
+        if audio == 3:
+            audio = self.audio3
+        if self.played_audio == False:
+            pygame.mixer.Channel(0).play(pygame.mixer.Sound(os.path.join(Settings.path_image, audio)))
             self.played_audio = True
 
     def animate(self):
-        
         if self.dropped_down == False:
             if self.y < -100:
                 self.y += 5
@@ -885,15 +922,22 @@ class Cutscene():
 
 
             if self.talk == True:
-                self.play_audio(0)
+                self.play_audio(self.which_audio)
+                print(self.which_audio)
                 if pygame.time.get_ticks() > self.clock_time:
                     self.clock_time = pygame.time.get_ticks() + self.animation_time
                     self.textindex += 1
                     if self.textindex >= len(self.textlist) -1:
                         self.textindex = len(self.textlist) -2
                         self.talk = False
+                        self.next_phrase()
+                        
+
+
                     self.letter = self.textlist[self.textindex]
                     self.fulltext.append(self.letter)
+
+    
             
         
     def draw(self, screen):
@@ -948,7 +992,9 @@ class Game(object):
         self.run_bar = False
         self.images = []
         self.cutscene_on = False
-        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados2.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#", "test_voice.wav")
+        self.sc1 = Cutscene(pygame.image.load(os.path.join(Settings.path_image, 'glados2.png')),"H#e#l#l#o# #f#o#r#c#e#d# #v#o#l#u#n#t#e#e#r# #1#2#7#4#0#.#",
+                    "#Y#o#u# #d#o#n#'#t# #e#x#a#c#t#l#y# #l#o#o#k# #l#i#k#e# #t#h#e# #s#a#v#i#o#r# #o#f# #h#u#m#a#n#i#t#y#,# #b#u#t# #s#t#i#l#l#,# #y#o#u# #a#r#e# #t#h#e#i#r# #l#a#s#t# #c#h#a#n#c#e#.",
+                    "#I#'m# #d#e#t#e#c#t#i#n#g# #s#e#v#e#r#a#l# #h#o#s#t#i#l#e# #s#i#g#n#a#l#s# #a#h#e#a#d#.#G#o#o#d# #l#u#c#k#.#", 3,"sc1_audio1.wav","sc1_audio2.wav", "sc1_audio3.wav", 120,60,80)
         for i in range(2):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"crosshair{i}.png"))
@@ -970,6 +1016,8 @@ class Game(object):
         self.pause_key = pygame.K_p
         self.jetpack_key = pygame.K_w
         self.image = pygame.image.load(os.path.join(Settings.path_image, 'glados2.png'))
+        
+        self.cutscene_played = None
 
 
 
@@ -982,6 +1030,7 @@ class Game(object):
                 if self.imageindex >= len(self.images):
                     self.imageindex = 0
                 self.image = self.images[self.imageindex]
+
     def sector_up(self):
         global score_value
         self.spawncount = round(score_value)%10
@@ -992,6 +1041,9 @@ class Game(object):
             Settings.current_enemys = 0
         if score_value <= 1:
             self.platforms.add(Platform(10, 600,100, 10))
+
+        if score_value < 2 and not self.cutscene_played == 1:
+            self.cutscene_on = True
            
 
     def spawn(self):
@@ -1688,7 +1740,7 @@ class Game(object):
 
 
 
-    def cutscene(self, scene):
+    def cutscene(self):
         self.dimmed_background.draw(self.screen)
         self.player.draw(self.screen)
         Player.animate(self.player)
@@ -1700,9 +1752,13 @@ class Game(object):
                     self.game_started = True
             elif event.type == pygame.QUIT:         
                 self.running = False
-        if scene == 1:
+        if score_value < 1:
             self.sc1.animate()
             self.sc1.draw(self.screen)
+            self.cutscene_played = 1
+            if self.sc1.end_cutscene == True:
+                self.cutscene_on = False
+                self.game_started = True
 
         
         pygame.display.flip()
@@ -1718,14 +1774,20 @@ class Game(object):
         self.screen.blit(Control_key, (x + 200,y))
         self.screen.blit(Button, (x,y))
     
+
+
+
     def preview_settings(self, screen):
+
+        self.ButtonFont = pygame.font.Font(None, 69)
+        keybindings_title = self.ButtonFont.render("Keybindings", 1, (WHITE))
         
         if self.changing_key == "walk_right":
             self.images.clear()
             for i in range(7):
                 bitmap = pygame.image.load(os.path.join(
                     Settings.path_image, f"player_walking_R{i}.png"))
-                scaled = pygame.transform.scale(bitmap, (200, 250))
+                scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
                 self.images.append(scaled)
 
         if self.changing_key == "walk_left":
@@ -1733,14 +1795,14 @@ class Game(object):
             for i in range(7):
                 bitmap = pygame.image.load(os.path.join(
                     Settings.path_image, f"player_walking_L{i}.png"))
-                scaled = pygame.transform.scale(bitmap, (200, 250))
+                scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
                 self.images.append(scaled)
 
         if self.changing_key == "jump":
             self.images.clear()
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"jumpR.png"))
-            scaled = pygame.transform.scale(bitmap, (200, 250))
+            scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
             self.images.append(scaled)
 
         # if self.changing_key == "shoot":
@@ -1755,7 +1817,7 @@ class Game(object):
             for i in range (2):
                 bitmap = pygame.image.load(os.path.join(
                     Settings.path_image, f"jetpack_R{i}.png"))
-                scaled = pygame.transform.scale(bitmap, (200, 250))
+                scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
                 self.images.append(scaled)
 
         if self.changing_key == "sprint":
@@ -1763,14 +1825,16 @@ class Game(object):
             for i in range (7):
                 bitmap = pygame.image.load(os.path.join(
                     Settings.path_image, f"player_sprinting_R{i}.png"))
-                scaled = pygame.transform.scale(bitmap, (200, 250))
+                scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
                 self.images.append(scaled)
             self.animation_time = 50
         else:
             self.animation_time = 100
         self.animate()
         
-        screen.blit(self.image, (1000, 300))
+        screen.blit(keybindings_title, (Settings.window_width // 2 - 100, 100))
+        screen.blit(self.image, (1000, 200))
+
 
 
    
@@ -1876,7 +1940,7 @@ class Game(object):
                 self.event_start()
                 
             elif self.cutscene_on == True:
-                self.cutscene(1)
+                self.cutscene()
                 pygame.mouse.set_visible(True)
 
             elif self.settings_window == True:
