@@ -1,6 +1,4 @@
 from datetime import datetime
-from posixpath import split
-from queue import Empty
 import pygame
 import os
 from random import randint
@@ -22,12 +20,12 @@ shieldpoints = 100
 # tkposy = 0
 # tkposx = 0
 jumping = False
-shield_active = False
 level = 0
 facing = "R"
 posx = 0
 posy = 0
-
+offset_x = 0
+offset_y = 0
 BLACK = (0, 0, 0) 
 GRAY = (127, 127, 127) 
 WHITE = (255, 255, 255)
@@ -45,7 +43,7 @@ class Settings(object):
     window_width = 1600
     path_file = os.path.dirname(os.path.abspath(__file__))
     path_image = os.path.join(path_file, "files")
-    player_size = (70,150) #70, 150
+    player_size = (70,150)
     bullet_size = (100, 50)
     melee_size = (70, 70)
     stormtrooper_size = (70,150)
@@ -58,22 +56,16 @@ class Settings(object):
     next_level = 100
     player_damage = 1
     player_fuel = 200
+    obx1 = -1000
+    obx2 = -1500
     title = "Galaxy Run"
 
-# Musik
-
-mixer.init()
-pygame. mixer.init()
 
 
-  
-mixer.music.load(os.path.join(Settings.path_image, "Soundtrack.mp3"))
-  
 
-pygame.mixer.music.set_volume(0.01)
-mixer.music.play()
 
 class Sounds(object):
+    mixer.init()
     blaster_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "blaster.wav"))
     blaster_sound.set_volume(0.01)
     refill_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "refill.mp3"))
@@ -94,8 +86,13 @@ class Sounds(object):
     rocket_sound.set_volume(0.01)
     player_hit = pygame.mixer.Sound(os.path.join(Settings.path_image, "hurt.wav"))
     player_hit.set_volume(0.01)
+    ob_distant = pygame.mixer.Sound(os.path.join(Settings.path_image, "ob_distant.wav"))
+    ob_distant.set_volume(0.1)
+    
+    
 
     def play_sound(sound):
+        busy = pygame.mixer.Channel(3).get_busy()
         if sound == "blaster":
             pygame.mixer.Channel(1).play(Sounds.blaster_sound)
         if sound == "refill":
@@ -118,6 +115,23 @@ class Sounds(object):
             pygame.mixer.Channel(0).play(Sounds.shield_sound)
         if sound == "jetpack":
             pygame.mixer.Channel(0).play(Sounds.jetpack_sound)
+        if sound == "ob_distant" and busy == False:
+            pygame.mixer.Channel(3).play(Sounds.ob_distant)
+            print("playing")
+    
+    def queue_sounds(volume):
+        ob = pygame.mixer.Sound(os.path.join(Settings.path_image, "ob.wav"))
+        pygame.mixer.Channel(3).queue(ob)
+        ob.set_volume(volume)
+
+        
+        
+    
+    def play_music():
+        mixer.init()
+        mixer.music.load(os.path.join(Settings.path_image, "Soundtrack.mp3"))
+        pygame.mixer.music.set_volume(0.05)
+        mixer.music.play()
 
     
 
@@ -226,23 +240,43 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.tkposx = tkposx
         self.tkposy = tkposy
         self.trigger = trigger
-        self.rect.left = self.tkposx#randint(300, Settings.window_width)
-        self.rect.top = self.tkposy #570
+        self.rect.left = self.tkposx
+        self.rect.top = self.tkposy
         self.speed_h = randint( 1, 3)
         self.speed_v = 0
         self.health = health
         self.images = []
         self.facing = "L"
-        for i in range(1):
-            bitmap = pygame.image.load(os.path.join(
-                Settings.path_image, f"stormtrooperR{i}.png"))
-            self.images.append(bitmap)
+        bitmap = pygame.image.load(os.path.join(
+            Settings.path_image, f"stormtrooper0.png"))
+        self.images.append(bitmap)
         self.imageindex = 0
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-        self.platfrom_y = 0
+        self.platform_y = 0
+        self.movecount = 0
         self.getting_hit = getting_hit
+
+        self.jumping = False
+        self.velocity_index = 0
+        self.velocity = ([-10,-9.5,-9,-8.5,-8,-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10])
+
+
+
+    def jump(self):
+        if self.jumping == True:
+            self.rect.top += self.velocity[self.velocity_index]
+            self.velocity_index += 1
+            if self.velocity_index >= len(self.velocity) -1:
+                self.velocity_index = len(self.velocity) - 1
+            if self.rect.top >= self.platform_y:
+                self.rect.top = self.platform_y
+                self.velocity_index = 0
+                if self.rect.top == self.platform_y:
+                    self.jumping = False
+
+
 
     def animate(self):
             if pygame.time.get_ticks() > self.clock_time:
@@ -254,14 +288,21 @@ class Stormtrooper(pygame.sprite.Sprite):
                 self.image = self.images[self.imageindex]
 
 
+    def get_direction(self):
+        if self.movecount == 30:
+            self.moveright = False
+        elif self.movecount == 0:
+            self.moveright = True
+    
     def move(self):
-        self.rect.left += self.speed_h
-        self.rect.top += self.speed_v
+        self.get_direction()
+        if self.moveright == True:
+            self.movecount += 1
+            self.rect.left += self.speed_h
+        elif self.moveright == False:
+            self.movecount -= 1
+            self.rect.left -= self.speed_h
 
-        if self.rect.left <= 0:
-                self.speed_h = 2
-        if self.rect.left >= Settings.window_width:
-                self.speed_h = -2
 
     def playermove_R(self, speed):
         self.rect.left -= speed
@@ -270,6 +311,7 @@ class Stormtrooper(pygame.sprite.Sprite):
         self.rect.left += speed
         
     def update(self):
+        self.move()
         if self.rect.left <= posy:
             self.facing = "R"
         if self.rect.left >= posy:
@@ -279,9 +321,9 @@ class Stormtrooper(pygame.sprite.Sprite):
         if self.facing == "L":
             self.images.clear()
             if self.getting_hit == False:
-                for i in range(3):
+                for i in range(2):
                     bitmap = pygame.image.load(os.path.join(
-                        Settings.path_image, f"stormtrooperR{i}.png"))
+                        Settings.path_image, f"stormtrooper{i}.png"))
                     self.images.append(bitmap)
             elif self.getting_hit == True:
                 for i in range(3):
@@ -292,21 +334,16 @@ class Stormtrooper(pygame.sprite.Sprite):
         elif self.facing == "R":
             self.images.clear()
             if self.getting_hit == False:
-                for i in range(3):
+                for i in range(2):
                     bitmap = pygame.image.load(os.path.join(
-                        Settings.path_image, f"stormtrooperL{i}.png"))
-                    self.images.append(bitmap)
+                        Settings.path_image, f"stormtrooper{i}.png"))
+                    rotate = pygame.transform.flip(bitmap, True, False)
+                    self.images.append(rotate)
             elif self.getting_hit == True:
                 for i in range(3):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"stormtrooperR_hit{i}.png"))
                     self.images.append(bitmap)
-
-
-        #self.move()
-
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
 
 
 
@@ -355,7 +392,7 @@ class Player(pygame.sprite.Sprite):
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-        self.platform_y = 570
+        self.platform_y = 0
         self.velocity_index = 0
         self.velocity = ([-10,-9.5,-9,-8.5,-8,-7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10])
 
@@ -392,9 +429,8 @@ class Player(pygame.sprite.Sprite):
         screen.blit(self.image, self.rect)
 
     def sprint(self):
-        if self.endurance > 0 and self.sprinting == True:
+        if self.sprinting == True:
             self.speed = 10
-            self.endurance = self.endurance - 1
             self.score_muliplier = 0.2
 
         else:
@@ -403,8 +439,9 @@ class Player(pygame.sprite.Sprite):
             self.score_muliplier = 0.1
         
 
-    def pos(self):                              #Gibt die Startposition an 
-        self.rect.left = 50
+    def pos(self):
+        global offset_x                              #Gibt die Startposition an 
+        self.rect.left = 50 + offset_x
         self.rect.top = 399
     
     def get_pos(self):
@@ -415,11 +452,10 @@ class Player(pygame.sprite.Sprite):
     def moveL(self):
         global facing, score_value
         Player.get_pos(self)
-        # if self.rect.left > 75:
         if score_value < 16:                     #Macht die Border unpassierbar
             self.rect.left = self.rect.left - self.speed
         if lives > 0:
-            score_value -= self.score_muliplier#0.1    #Spieler wird nach links verschoben
+            score_value -= self.score_muliplier   #Spieler wird nach links verschoben
       
         if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
                 self.images.clear()
@@ -439,14 +475,14 @@ class Player(pygame.sprite.Sprite):
     def moveR(self):
         global facing, score_value, jumping
         Player.get_pos(self)
-        if self.rect.left < Settings.window_width // 2:#Settings.window_width - 50:    #Macht die Border unpassierbar
+        if self.rect.left < Settings.window_width // 2:
             self.rect.left = self.rect.left + self.speed
         if self.health > 0:
-            score_value += self.score_muliplier#0.1
-                #Spieler wird nach rechts verschoben
+            score_value += self.score_muliplier
+               
        
         if self.shield == False and self.flames_on == False and self.sprinting == False and jumping == False:
-            self.images.clear()###
+            self.images.clear()
             for i in range(7):
                     bitmap = pygame.image.load(os.path.join(
                         Settings.path_image, f"player_walking_R{i}.png"))
@@ -465,7 +501,6 @@ class Player(pygame.sprite.Sprite):
         if fuel > 0:
             Sounds.play_sound("jetpack")
             if self.rect.top <= 570: 
-                # if self.rect.top >= 1:
                     self.rect.top = self.rect.top - 13
                     self.in_air = True
                     self.images.clear()
@@ -506,9 +541,7 @@ class Player(pygame.sprite.Sprite):
         global fuel
         global endurance
         Game.invtimer(self)
-        
         self.datetime = datetime.now()
-
         if self.energypoints <= 0:
             if self.playing_shieldlow == False:
                 Sounds.play_sound("shields_low")
@@ -519,7 +552,7 @@ class Player(pygame.sprite.Sprite):
             if self.playing_shieldrefill == False:
                 Sounds.play_sound('refill')
                 self.playing_shieldrefill = True
-            self.energypoints = self.energypoints + 0.5 #0.25
+            self.energypoints = self.energypoints + 0.5
             if self.energypoints >= 75:
                 self.refilling = False
                 self.passed_time = 0
@@ -530,19 +563,12 @@ class Player(pygame.sprite.Sprite):
             self.run_fuel = False
             self.passed_fueltime = 0
        
-        if self.rect.top == self.platform_y and fuel < Settings.player_fuel: #and #self.usefuel == False:
-        #    self.run_fuel = True
-         #   print(self.passed_fueltime)
-          #  if fuel < 200:
-           #     Game.fueltimer(self)
-            #    if self.passed_fueltime >= 300:
-                    fuel += 1#0.4
-              #      if fuel >= 200:
-               #         self.passed_fueltime = 0
-                #        self.run_fuel = False
+        if self.rect.top == self.platform_y and fuel < Settings.player_fuel:
+            fuel += 1
+
         if self.endurance < 100:
-                        self.endurance += 1
-                        #print(self.endurance)
+            self.endurance += 1
+                        
 
     def flamethrower_on(self):
                 if facing == "R":
@@ -565,7 +591,6 @@ class Player(pygame.sprite.Sprite):
         
     def jump(self):
         global jumping, endurance
-        
         if jumping == True:
             if self.flames_on == False:
                 self.images.clear()
@@ -583,7 +608,7 @@ class Player(pygame.sprite.Sprite):
                 self.velocity_index = 0
                 if self.rect.top == self.platform_y:
                     jumping = False
-        Player.get_pos(self)
+    
 
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
@@ -608,7 +633,7 @@ class Pickups(pygame.sprite.Sprite):
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, (50,50))
         self.rect = self.image.get_rect()
-        self.rect.left = randint(0, Settings.window_width - 50)
+        self.rect.left = randint(Settings.window_width // 2, Settings.window_width - 50)
         self.rect.top = 0
         self.speed_h = 3
         self.speed_v = 5
@@ -637,9 +662,6 @@ class Pickups(pygame.sprite.Sprite):
 
     def playermove_L(self, speed):
         self.rect.left += speed
-
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
 
 class Flame(pygame.sprite.Sprite):
     def __init__(self, filename):
@@ -685,7 +707,7 @@ class Flame(pygame.sprite.Sprite):
         self.facing = facing
         self.rect.top = posx 
         if self.facing == "R":
-            self.rect.left = posy + 70#75
+            self.rect.left = posy + 70
         if self.facing == "L":
                 self.rect.left = posy - 50
         
@@ -793,6 +815,7 @@ class Rocket(pygame.sprite.Sprite):
                     self.imageindex = 0
                     self.kill()
                     self.exploding = False
+
     def move(self):
         if self.exploding == False:
             self.x = self.x + self.dx
@@ -807,7 +830,6 @@ class Rocket(pygame.sprite.Sprite):
         self.rect.left += speed
 
     def explode(self):
-        
         self.exploding = True
         Sounds.play_sound("explosion")
         self.images.clear()
@@ -817,9 +839,81 @@ class Rocket(pygame.sprite.Sprite):
             bitmap = pygame.transform.scale(bitmap, (250,250))
             self.images.append(bitmap)
             
+class OB(pygame.sprite.Sprite):
+    def __init__(self, filename):
+        super().__init__()
+        self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
+        self.image = pygame.transform.scale(self.image, (100,100))
+        self.rect = self.image.get_rect()
+        self.rect.left = randint(int(Settings.obx2),int(Settings.obx1))
+        self.rect.top = -100
+        self.speed_h = 0
+        self.speed_v = randint(40,50)
+        self.images = []
+        self.exploding = False
+        for i in range(3):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"tkbullet{i}.png"))
+            bitmap = pygame.transform.scale(bitmap, (170,50))
+            bitmap = pygame.transform.rotate(bitmap, 90)
+            self.images.append(bitmap)
+        self.imageindex = 0
+        self.image = self.images[self.imageindex]
+        self.clock_time = pygame.time.get_ticks()
+        self.animation_time = 100
 
+    def animate(self):
+            if pygame.time.get_ticks() > self.clock_time:
+                self.clock_time = pygame.time.get_ticks() + self.animation_time
+                self.imageindex += 1
+                if self.imageindex >= len(self.images):
+                    self.imageindex = 0
+                    if self.exploding == True:
+                        self.kill()
+                self.image = self.images[self.imageindex]
 
+    def move(self):
+        self.despawn()
+        if Settings.obx1 < 0:
+            Settings.obx1 += 0.5
+            Settings.obx2 += 0.5
+        else:
+            Settings.obx1 += 0.1
+            Settings.obx2 += 0.1
+        self.rect.move_ip(self.speed_h, self.speed_v)
 
+    def explode(self):
+        self.speed_h = 0
+        self.speed_v = 0
+        self.exploding = True
+        self.images.clear()
+        for i in range(5):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"explosion{i}.png"))
+            bitmap = pygame.transform.scale(bitmap, (250,250))
+            self.images.append(bitmap)
+
+    def playermove_R(self, speed, sprint_on):
+        if sprint_on == False:
+            Settings.obx1 = Settings.obx1 - 0.5
+            Settings.obx2 = Settings.obx2 - 0.5
+        else:
+            Settings.obx1 = Settings.obx1 - 1
+            Settings.obx2 = Settings.obx2 - 1
+
+    def playermove_L(self, speed, sprint_on):
+        if sprint_on == False:
+            Settings.obx1 = Settings.obx1 + 0.5
+            Settings.obx2 = Settings.obx2 + 0.5
+        else:
+            Settings.obx1 = Settings.obx1 + 1
+            Settings.obx2 = Settings.obx2 + 1
+
+        self.speed_h = 0
+
+    def despawn(self):
+        if self.rect.top > Settings.window_height - 100:
+            self.kill()
 
 class tkprojectile(pygame.sprite.Sprite):
     def __init__(self, filename, facing, x, y):
@@ -856,7 +950,7 @@ class tkprojectile(pygame.sprite.Sprite):
         if self.facing == "L":
             self.rect.move_ip(-self.speed_h, self.speed_v)
 
-    
+
     def animate(self):
             if pygame.time.get_ticks() > self.clock_time:
                 self.clock_time = pygame.time.get_ticks() + self.animation_time
@@ -976,7 +1070,6 @@ class Cutscene():
                         self.next_phrase()
                         
 
-
                     self.letter = self.textlist[self.textindex]
                     self.fulltext.append(self.letter)
 
@@ -1016,6 +1109,7 @@ class Game(object):
         self.stormbies = pygame.sprite.Group()
         self.flames = pygame.sprite.Group()
         self.platforms = pygame.sprite.Group()
+        self.orbital_bombardment = pygame.sprite.Group()
         self.flames_on = False
         self.sector = 0
         self.spawncount = 0
@@ -1048,6 +1142,8 @@ class Game(object):
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
 
+        self.shake = 0
+
         # for controls
         self.changing_keybindings = False
         self.changing_key = None
@@ -1059,9 +1155,94 @@ class Game(object):
         self.pause_key = pygame.K_p
         self.jetpack_key = pygame.K_w
         self.image = pygame.image.load(os.path.join(Settings.path_image, 'glados2.png'))
-        
+        self.allowed_to_jump = False
         self.cutscene_played = None
 
+    def start_ob(self):
+        self.orbital_bombardment.add((OB("glados2.png")))
+        volume = 0
+        if Settings.obx1 > self.player.rect.left - 800:
+            self.shake = 1
+            volume = 0.01
+            if Settings.obx1 > self.player.rect.left - 700:
+                self.shake = 2
+                volume = 0.02
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 600:
+                self.shake = 3
+                volume = 0.03
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 500:
+                self.shake = 4
+                volume = 0.04
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 400:
+                self.shake = 5
+                volume = 0.05
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 300:
+                self.shake = 6
+                volume = 0.06
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 200:
+                self.shake = 7
+                volume = 0.07
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left - 100:
+                self.shake = 8
+                volume = 0.08
+                Sounds.queue_sounds(volume)
+            if Settings.obx1 > self.player.rect.left:
+                self.shake = 9
+                volume = 0.09
+                Sounds.queue_sounds(volume)
+            
+
+        if Settings.obx1 < 0:
+            
+            Sounds.play_sound("ob_distant")
+        if Settings.obx1 > 0:
+            Sounds.queue_sounds(volume)
+            self.screen_shake()
+        
+        elif self.player.rect.left > Settings.window_width // 2:
+            self.player.rect.left -= 1
+    
+    def screen_shake(self):
+        global offset_x, offset_y
+        offset_x = randint(-self.shake,self.shake)
+        offset_y = randint(-self.shake,self.shake)
+        for s in self.stormtroopers:
+            s.rect.x+=offset_x
+            s.rect.y+=offset_y
+        for z in self.stormbies:
+            z.rect.x+=offset_x
+            z.rect.y+=offset_y
+        for a in self.ammocrates:
+            a.rect.x+=offset_x
+            a.rect.y+=offset_y
+        for h in self.healthpacks:
+            h.rect.x+=offset_x
+            h.rect.y+=offset_y
+        for tk in self.tkprojectiles:
+            tk.rect.x+=offset_x
+            tk.rect.y+=offset_y
+        for p in self.platforms:
+            p.rect.x+=offset_x
+            p.rect.y+=offset_y
+        for r in self.rockets:
+            r.rect.x+=offset_x
+            r.rect.y+=offset_y
+        for o in self.orbital_bombardment:
+            o.rect.x+=offset_x
+            o.rect.y+=offset_y
+        self.player.rect.x+=offset_x
+        self.player.rect.y+=offset_y
+        self.background0.bgx+=offset_x
+        self.background1.bgx+=offset_x
+        self.background2.bgx+=offset_x
+        self.background3.bgx+=offset_x
+        self.background4.bgx+=offset_x
 
 
 
@@ -1076,14 +1257,18 @@ class Game(object):
 
     def sector_up(self):
         global score_value
+        if score_value <= 1:
+            if Settings.current_platforms < Settings.max_platforms:
+                self.platforms.add(Platform(10, 600,100, 10))
+                print(Settings.current_platforms)
+                Settings.current_platforms = Settings.current_platforms + 1
+                print("Spawned platform")
         self.spawncount = round(score_value)%10
         if self.spawncount == 0:
             self.spawn()
         if self.spawncount == 7:
             Settings.current_platforms = 0
             Settings.current_enemys = 0
-        if score_value <= 1:
-            self.platforms.add(Platform(10, 600,100, 10))
 
         if score_value < 2 and not self.cutscene_played == 1:
             self.cutscene_on = True
@@ -1096,8 +1281,12 @@ class Game(object):
             if score_value <= 200:
                 if Settings.current_platforms < Settings.max_platforms:
                     Settings.current_platforms += 1
-                    self.platforms.add(Platform(randint(1500,1800), randint(100, 700),randint(100,600), 10))
-                self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,1700,1, randint(0, 100), False))
+                    ptx = randint(1500,1800)
+                    pty = randint(100, 700)
+                    ptl = randint(100,600)
+                    self.platforms.add(Platform(ptx,pty ,ptl, 10))
+                    self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
+                  
             elif score_value > 200 and score_value <= 400:
                 self.platforms.add(Platform(1800, 700 ,randint(100,600), 10))
                 self.stormbies.add(Stormbie("stormbieL0.png",100,1700,1))
@@ -1155,7 +1344,6 @@ class Game(object):
                 zhealthcolor = (RED)
             pygame.draw.rect(self.screen, (zhealthcolor), pygame.Rect(z.zposx, z.zposy, z.health, 11))
             pygame.draw.rect(self.screen, (BLACK), pygame.Rect(z.zposx, z.zposy, z.health, 11), 2)
-
 
      
         if self.player.health >= 3:
@@ -1309,9 +1497,10 @@ class Game(object):
 
                 
     def leftclick(self):
-        global shield_active, fuel
+        global fuel
         leftclick = pygame.mouse.get_pressed() == (1, 0, 0)
         rightclick = pygame.mouse.get_pressed() == (0, 0, 1)
+        
         
         if leftclick == True:
             if self.player.refilling == False:
@@ -1338,6 +1527,7 @@ class Game(object):
             self.flames_on = False
             for f in self.flames:
                 f.kill()
+            
             self.player.images.clear()
             if facing == "R":
                 for i in range(2):
@@ -1350,7 +1540,7 @@ class Game(object):
                     bitmap = pygame.image.load(os.path.join(
                             Settings.path_image, f"player_standing_L{i}.png"))
                     self.player.images.append(bitmap)
-        
+    
         if rightclick == True:
             self.player.block()
         else:
@@ -1406,6 +1596,8 @@ class Game(object):
                     p.playermove_L(self.player.speed)
                 for r in self.rockets:
                     r.playermove_L(self.player.speed)
+                for o in self.orbital_bombardment:
+                    o.playermove_L(self.player.speed,self.player.sprinting)
                 self.background0.scroll_l(5 * self.player_speed)
                 self.background1.scroll_l(4 * self.player_speed)
                 self.background2.scroll_l(3 * self.player_speed)
@@ -1428,11 +1620,14 @@ class Game(object):
                     p.playermove_R(self.player.speed)
                 for r in self.rockets:
                     r.playermove_R(self.player.speed)
+                for o in self.orbital_bombardment:
+                    o.playermove_R(self.player.speed,self.player.sprinting)
                 self.background0.scroll_r(5 * self.player_speed)
                 self.background1.scroll_r(4 * self.player_speed)
                 self.background2.scroll_r(3 * self.player_speed)
                 self.background3.scroll_r(2 * self.player_speed)
                 self.background4.scroll_r(1 * self.player_speed)
+    
             if keys[self.sprint_key]:
                 self.player.sprinting = True
                 self.player.sprint()
@@ -1440,9 +1635,8 @@ class Game(object):
                 self.player.walk()
             if keys[self.jetpack_key]:
                 self.player.moveUp()
-            if keys[pygame.K_r]:
-                self.restart()
-
+            
+     
                 
     def restart(self):
         global bullets, fuel, score_value, lives, spawncount, count, level
@@ -1462,6 +1656,9 @@ class Game(object):
             z.kill()
         for pt in self.platforms:
             pt.kill()
+        for o in self.orbital_bombardment:
+            o.kill()
+        
         self.level = 1
         self.xp = 0
         self.current_xp = 0
@@ -1475,29 +1672,39 @@ class Game(object):
         self.sector = 0
         self.player.rect.x = 50
         self.player.rect.y = 300
+        Settings.obx1 = -1000
+        Settings.obx2 = -1500
+        Settings.current_platforms = 0
+        self.sector_up()
+        #print(Settings.obx1)
         pygame.mixer.music.rewind()
 
-    def check_figure_collision(self, platform, figure, platform_offset=0):
+    def check_figure_collision(self, platform, figure):
         if figure.rect.bottom >= platform.rect.top and figure.rect.bottom <= platform.rect.bottom:
             if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
-                figure.platform_y = platform.rect.top - 150
-                figure.rect.bottom = platform.rect.top
+                    figure.platform_y = platform.rect.top - 150
+                    figure.rect.bottom = platform.rect.top
+                    self.allowed_to_jump = True
 
-        if figure.rect.top  <= platform.rect.bottom and figure.rect.top >= platform.rect.top:
-            if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
-                figure.rect.top = platform.rect.bottom
-                #return True
+
+            
+        # if figure.rect.top  <= platform.rect.bottom and figure.rect.top >= platform.rect.top:
+        #     if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
+        #         figure.rect.top = platform.rect.bottom
+        
+
 
     def collide(self):
         for pt in self.platforms:
-            self.check_figure_collision(pt, self.player, platform_offset=150)
+            self.check_figure_collision(pt, self.player)
 
             for s in self.stormtroopers:
-                self.check_figure_collision(pt, s, 150)
+                self.check_figure_collision(pt, s)
+            
 
 
             for z in self.stormbies:
-                self.check_figure_collision(pt, z, 150)
+                self.check_figure_collision(pt, z)
 
             for a in self.ammocrates:
                 if self.check_figure_collision(pt, a):
@@ -1506,6 +1713,7 @@ class Game(object):
             for h in self.healthpacks:
                 if self.check_figure_collision(pt, h):
                     h.on_ground = True
+                   
 
 
     def countdown(time_sec): #FÜR SPÄTER
@@ -1546,6 +1754,11 @@ class Game(object):
             else:
                 s.getting_hit = False
 
+            for o in self.orbital_bombardment:
+                if pygame.sprite.collide_rect(o, s):
+                    s.kill()
+                    o.kill()
+
 
             for r in self.rockets:
                 if pygame.sprite.spritecollide(s, self.rockets, False):
@@ -1566,8 +1779,13 @@ class Game(object):
 
         for pt in self.platforms:
             for r in self.rockets:
-                if pygame.sprite.spritecollide(pt,self.rockets, False):
+                if pygame.sprite.collide_rect(r, pt):
                     r.explode()
+            
+            for o in self.orbital_bombardment:
+                if pygame.sprite.collide_rect(o, pt):
+                    o.explode()
+                    pt.kill()
                 
 
         for z in self.stormbies:
@@ -1594,7 +1812,11 @@ class Game(object):
                         self.player.kill()
                 if self.player.shield == True:
                         Sounds.play_sound("shield_hit")
-        
+
+        if pygame.sprite.spritecollide(self.player, self.orbital_bombardment, True):
+            self.player.health = self.player.health - 1
+
+  
         if pygame.sprite.spritecollide(self.player, self.rockets, False) :
             for r in self.rockets:
                 if r.exploding == True:
@@ -1611,9 +1833,10 @@ class Game(object):
                     self.player.health = self.player.health - 1
                     Sounds.play_sound("player_hit")
         
+        
     
     def reward(self):
-        dice6 = randint(1, 6)
+        dice6 = randint(1, 2)
         self.xp = self.xp + 5
         self.xp_gained = True
         if self.xp == Settings.next_level:
@@ -1629,7 +1852,6 @@ class Game(object):
 
         elif dice6 == 3:
             pass
-            #self.fuelpacks.add(Pickups("fuelpack.png"))
 
 
     def pickup(self):
@@ -1774,6 +1996,7 @@ class Game(object):
                             Settings.path_image, f"crosshair{i}.png"))
                         self.images.append(bitmap)
                     print("Starting...")
+                    Sounds.play_music()
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 +100 <= mouse[1] <= Settings.window_height // 2 + 200:
                     print("Endless mode")
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 + 200 <= mouse[1] <= Settings.window_height // 2 + 400:
@@ -1803,11 +2026,7 @@ class Game(object):
             if self.sc1.end_cutscene == True:
                 self.cutscene_on = False
                 self.game_started = True
-
-        
         pygame.display.flip()
-
-
 
     # Settings Buttons
     def draw_buttons_settings(self, x, y, text, color, key):
@@ -1848,13 +2067,6 @@ class Game(object):
                 Settings.path_image, f"jumpR.png"))
             scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2))
             self.images.append(scaled)
-
-        # if self.changing_key == "shoot":
-        #     self.images.clear()
-        #     bitmap = pygame.image.load(os.path.join(
-        #         Settings.path_image, f"shootR.png"))
-        #     scaled = pygame.transform.scale(bitmap, (200, 250))
-        #     self.images.append(scaled)
         
         if self.changing_key == "jetpack":
             self.images.clear()
@@ -1878,13 +2090,6 @@ class Game(object):
         
         screen.blit(keybindings_title, (Settings.window_width // 2 - 100, 100))
         screen.blit(self.image, (1000, 200))
-
-
-
-   
-
-
-
 
     def button_logic(self):
         mouse = pygame.mouse.get_pos()
@@ -1967,8 +2172,6 @@ class Game(object):
 
 
         
-                
-
     def run(self):
         while self.running:
             self.clock.tick(60)                         
@@ -1978,6 +2181,7 @@ class Game(object):
                 self.draw()
                 self.get_cursor_center()
                 pygame.mouse.set_visible(False)
+                
             elif self.game_started == False and self.cutscene_on == False and self.settings_window == False:
                 pygame.mouse.set_visible(True)
                 self.draw_start()
@@ -2004,12 +2208,17 @@ class Game(object):
             if event.type == pygame.KEYDOWN:
                 if event.key == self.pause_key: 
                     self.game_started = False
-                if event.key == self.jump_key:
+                if event.key == self.jump_key and self.allowed_to_jump == True:
                     jumping = True
+                    for s in self.stormtroopers:
+                        s.jumping = True
                 if event.key == pygame.K_q:
                     self.player.change_previous_weapon()
                 if event.key == pygame.K_e:
                     self.player.change_next_weapon()
+                if event.key == pygame.K_r:
+                    self.restart()
+
 
             elif event.type == pygame.QUIT:         
                 self.running = False
@@ -2024,6 +2233,7 @@ class Game(object):
         
 
     def update(self):
+        self.start_ob()
         self.upgrade_menu()
         self.stormtroopers.update()
         self.stormbies.update()
@@ -2034,6 +2244,9 @@ class Game(object):
         Game.hit(self)
         Player.animate(self.player)
         self.flames.update()
+        for o in self.orbital_bombardment:
+            o.move()
+            o.animate()
         for tk in self.tkprojectiles:
             tk.animate()
         for p in self.projectiles:
@@ -2070,7 +2283,8 @@ class Game(object):
         self.background1.draw(self.screen)
         self.background0.draw(self.screen)
         self.platforms.draw(self.screen)
-        self.stormtroopers.draw(self.screen)
+        self.orbital_bombardment.draw(self.screen)
+        self.stormtroopers.draw(self.screen) #self.offsetx)
         self.stormbies.draw(self.screen)
         self.player.draw(self.screen)
         self.tkprojectiles.draw(self.screen)

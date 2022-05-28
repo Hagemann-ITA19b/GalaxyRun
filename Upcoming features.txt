@@ -1,5 +1,3 @@
 PVP Modus x
-Titelbildschirm -
-Pausebildschirm -
-Keybindings selber einstellen x
+
 
