@@ -1,4 +1,3 @@
-from datetime import datetime
 import pygame
 import os
 from random import randint
@@ -22,6 +21,7 @@ posx = 0
 posy = 0
 offset_x = 0
 offset_y = 0
+shaking = False
 BLACK = (0, 0, 0) 
 GRAY = (127, 127, 127) 
 WHITE = (255, 255, 255)
@@ -33,7 +33,7 @@ CYAN = (0, 255, 255)
 MAGENTA = (255, 0, 255)
 PURP = (123, 32, 251)
 ORANGE = (255, 165, 0)
-#CYAN = (1, 227, 242)
+
 
 class Settings(object):
     window_height = 720
@@ -81,6 +81,8 @@ class Sounds(object):
     player_hit.set_volume(0.01)
     ob_distant = pygame.mixer.Sound(os.path.join(Settings.path_image, "ob_distant.wav"))
     ob_distant.set_volume(0.1)
+    death = pygame.mixer.Sound(os.path.join(Settings.path_image, "death.mp3"))
+    death.set_volume(1)
     
     
 
@@ -113,15 +115,15 @@ class Sounds(object):
             print("playing")
     
 
-    
-    def play_music():
-        mixer.init()
-        mixer.music.load(os.path.join(Settings.path_image, "Soundtrack.mp3"))
+    def play_music(audio):
+        mixer.music.unload()
+        mixer.music.load(os.path.join(Settings.path_image, audio))
         pygame.mixer.music.set_volume(0.05)
         mixer.music.play()
 
-    
 
+
+    
 
 class Background():
     def __init__(self, filename):
@@ -527,7 +529,6 @@ class Player(pygame.sprite.Sprite):
         global fuel
         global endurance
         Game.invtimer(self)
-        self.datetime = datetime.now()
         if self.energypoints <= 0:
             if self.playing_shieldlow == False:
                 Sounds.play_sound("shields_low")
@@ -763,7 +764,38 @@ class projectile(pygame.sprite.Sprite):
         self.x = self.x + self.dx 
         self.y = self.y + self.dy 
         self.rect.x = int(self.x) 
-        self.rect.y = int(self.y) 
+        self.rect.y = int(self.y)
+
+
+class Laser(pygame.sprite.Sprite):
+    def __init__(self ,dx, dy):
+        super().__init__()
+        self.rect = self.image.get_rect()
+        self.rect.left = posy 
+        self.rect.top = posx
+        x = self.rect.left
+        y = self.rect.top
+        self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
+        self.speed = 20
+        self.dx = math.cos(self.angle) * self.speed
+        self.dy = math.sin(self.angle) * self.speed
+        self.x = x
+        self.y = y
+    
+    def move(self):
+        self.x = self.x + self.dx
+        self.y = self.y + self.dy
+        self.rect.x = int(self.x) 
+        self.rect.y = int(self.y)
+
+    def playermove_R(self, speed):
+        self.rect.left -= speed
+
+    def playermove_L(self, speed):
+        self.rect.left += speed
+
+
+
 
 class Rocket(pygame.sprite.Sprite):
     def __init__(self, filename, dx, dy): #delta x and delta y
@@ -795,23 +827,26 @@ class Rocket(pygame.sprite.Sprite):
         
 
     def animate(self):
-            if pygame.time.get_ticks() > self.clock_time:
-                self.clock_time = pygame.time.get_ticks() + self.animation_time
-                self.imageindex += 1
-                self.speed = self.speed + 1
-            if self.exploding == False:
-                if self.imageindex >= len(self.images):
-                    self.imageindex = 0
+        global shaking
+        if pygame.time.get_ticks() > self.clock_time:
+            self.clock_time = pygame.time.get_ticks() + self.animation_time
+            self.imageindex += 1
+            self.speed = self.speed + 1
+        if self.exploding == False:
+            if self.imageindex >= len(self.images):
+                self.imageindex = 0
+            self.image = self.images[self.imageindex]
+        if self.exploding == True:
+            shaking = True
+            if self.imageindex < len(self.images):
                 self.image = self.images[self.imageindex]
-            if self.exploding == True:
-                if self.imageindex < len(self.images):
-                    self.image = self.images[self.imageindex]
-                    self.rect = self.image.get_rect()
-                    self.rect.centerx, self.rect.centery = self.x, self.y
-                if self.imageindex >= len(self.images):
-                    self.imageindex = 0
-                    self.kill()
-                    self.exploding = False
+                self.rect = self.image.get_rect()
+                self.rect.centerx, self.rect.centery = self.x, self.y
+            if self.imageindex >= len(self.images):
+                self.imageindex = 0
+                shaking = False
+                self.kill()
+                self.exploding = False
 
     def move(self):
         if self.exploding == False:
@@ -835,6 +870,7 @@ class Rocket(pygame.sprite.Sprite):
                 Settings.path_image, f"explosion{i}.png"))
             bitmap = pygame.transform.scale(bitmap, (250,250))
             self.images.append(bitmap)
+        
             
 class OB(pygame.sprite.Sprite):
     def __init__(self, filename):
@@ -997,6 +1033,8 @@ class Cutscene():
         self.spokentext = 1
         self.which_audio = 1
         self.end_cutscene = False
+        self.up = False
+
 
     def next_phrase(self):
         if self.talk == False and self.spokentext < self.addedtext:
@@ -1016,11 +1054,9 @@ class Cutscene():
             self.spokentext = self.spokentext + 1
 
         if self.spokentext == self.addedtext and self.talk == False:
-            self.end_cutscene = True
+            self.up = True
 
             
-            
-
     def get_pos(self):
         if self.y == -50:
             self.animate_up = True
@@ -1046,6 +1082,12 @@ class Cutscene():
                 self.y += 5
             if self.y == -100:
                 self.dropped_down = True
+            
+        if self.up == True:
+            if self.y > -500:
+                self.y -= 5
+            if self.y == -500:
+                self.end_cutscene = True
 
         if self.dropped_down == True:
             self.get_pos()
@@ -1053,7 +1095,6 @@ class Cutscene():
                 self.y = self.y - 0.5
             elif self.animate_up == False:
                 self.y = self.y + 0.5
-
 
             if self.talk == True:
                 self.play_audio(self.which_audio)
@@ -1138,8 +1179,8 @@ class Game(object):
         self.cursor_rect = self.images[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
-
-        self.shake = 0
+        self.shake_screen = False
+        self.shake = 1
         self.endless_mode = False
 
         # for controls
@@ -1152,45 +1193,55 @@ class Game(object):
         self.sprint_key = pygame.K_LSHIFT
         self.pause_key = pygame.K_p
         self.jetpack_key = pygame.K_w
+
         self.image = pygame.image.load(os.path.join(Settings.path_image, 'glados2.png'))
         self.allowed_to_jump = False
         self.cutscene_played = None
+        
+        self.multiply_font1 = False
+        self.fontmultiplier1 = 1
+
+        self.d_images = []
+        self.d_images.append(pygame.image.load(os.path.join(Settings.path_image, 'deathscreen0.png')))
+        self.d_imageindex = 0
+        self.deathimg = self.d_images[self.d_imageindex]
+        self.game_over = False
 
     def start_ob(self):
+        global shaking
         self.orbital_bombardment.add((OB("glados2.png")))
-        volume = 0
+
         if Settings.obx1 > self.player.rect.left - 800:
             self.shake = 1
-            volume = 0.01
+
         if Settings.obx1 > self.player.rect.left - 700:
             self.shake = 2
-            volume = 0.02
+
         if Settings.obx1 > self.player.rect.left - 600:
             self.shake = 3
-            volume = 0.03
+
         if Settings.obx1 > self.player.rect.left - 500:
             self.shake = 4
-            volume = 0.04
+
         if Settings.obx1 > self.player.rect.left - 400:
             self.shake = 5
-            volume = 0.05
+
         if Settings.obx1 > self.player.rect.left - 300:
             self.shake = 6
-            volume = 0.06
+
         if Settings.obx1 > self.player.rect.left - 200:
             self.shake = 7
-            volume = 0.07
+
         if Settings.obx1 > self.player.rect.left - 100:
             self.shake = 8
-            volume = 0.08
+
         if Settings.obx1 > self.player.rect.left:
             self.shake = 9
-            volume = 0.09
-            
+
 
         if Settings.obx1 < 0:
             Sounds.play_sound("ob_distant")
-        if Settings.obx1 > 0:
+        if Settings.obx1 > 0 or shaking == True:
             self.screen_shake()
         
         elif self.player.rect.left > Settings.window_width // 2:
@@ -1248,9 +1299,7 @@ class Game(object):
         if score_value <= 1:
             if Settings.current_platforms < Settings.max_platforms:
                 self.platforms.add(Platform(10, 600,100, 10))
-                print(Settings.current_platforms)
                 Settings.current_platforms = Settings.current_platforms + 1
-                print("Spawned platform")
         self.spawncount = round(score_value)%10
         if self.spawncount == 0:
             self.spawn()
@@ -1292,7 +1341,7 @@ class Game(object):
     def font(self):
         global bullets, offset_x, offset_y
         font = pygame.font.Font(None, 36)
-        font_death = pygame.font.Font(None, 72)
+
 
         ammo_pos = 230
         if self.player.weapons_index == 0:
@@ -1410,15 +1459,6 @@ class Game(object):
         pygame.draw.rect(self.screen, (BLUE), pygame.Rect(posy, posx - 20, self.player.energypoints , 11))
         pygame.draw.rect(self.screen, (BLACK), pygame.Rect(posy, posx - 20, self.player.energypoints, 11), 2)
 
-        
-        if self.player.health <= 0:
-            pygame.draw.rect(self.screen, (BLACK), pygame.Rect(0,0, 1600, 720))
-            Deathscreen = font_death.render("You died", 1, (RED))
-            PressR = font.render("Press R retard", 1, (WHITE))
-            self.screen.blit(scoreprint, (700, 499))
-            self.screen.blit(levelprint, (700, 600))
-            self.screen.blit(Deathscreen, (485, Settings.window_height // 2 - 100))
-            self.screen.blit(PressR, (700, Settings.window_height // 2 + 30))
 
         if self.upgrade_allowed == True:
             self.screen.blit(self.upgrade1, (875, 60))
@@ -1426,7 +1466,48 @@ class Game(object):
             self.screen.blit(self.upgrade3, (875, 140))
 
 
-    
+    def change_screen(self):
+        time = 0
+        if self.d_imageindex == 2:
+            time = 1000
+        else:
+            time = 300
+
+        if pygame.time.get_ticks() > self.clock_time:
+            self.clock_time = pygame.time.get_ticks() + 1000#time
+            self.d_imageindex += 1
+            if self.d_imageindex >= len(self.d_images):
+                self.d_imageindex = 0
+            self.deathimg = self.d_images[self.d_imageindex]
+
+
+    def draw_game_over(self, screen):
+        font_death = pygame.font.Font(None, 72)
+        font = pygame.font.Font(None, 36)
+        scoreprint = font.render("Score: " + str(round(score_value)) + "m", 1, (WHITE))
+        levelprint = font.render("Level: " + str(self.level), 1, (WHITE))
+        self.d_images.clear()
+        for i in range(2):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"deathscreen{i}.png")) 
+            self.d_images.append(bitmap)
+
+        screen.blit(self.deathimg, (0, 0))
+
+
+        Deathscreen = font_death.render("You died", 1, (RED))
+        PressR = font.render("Press R to retry your luck", 1, (WHITE))
+        self.screen.blit(scoreprint, (700, 499))
+        self.screen.blit(levelprint, (700, 600))
+        self.screen.blit(Deathscreen, (485, Settings.window_height // 2 - 100))
+        self.screen.blit(PressR, (700, Settings.window_height // 2))
+        pygame.display.flip()
+
+        
+
+
+
+
     def upgrade_menu(self):
         self.colors = [CYAN, MAGENTA]                 #switches between colors
         if pygame.time.get_ticks() > self.clock_time: #
@@ -1460,7 +1541,8 @@ class Game(object):
                 self.upgrade_allowed = False
                 self.levelup = False
                 Settings.player_fuel = Settings.player_fuel + 50
-        
+
+
 
 
 
@@ -1532,7 +1614,6 @@ class Game(object):
             self.flames_on = False
             self.player.flamethrower_off()
             self.usefuel = False #work in progress
-        
             self.flames_on = False
             for f in self.flames:
                 f.kill()
@@ -1613,7 +1694,7 @@ class Game(object):
                 self.background3.scroll_l(2 * self.player_speed)
                 self.background4.scroll_l(1 * self.player_speed)
 
-            if keys [self.walkR_key]:#[pygame.K_d]:
+            if keys [self.walkR_key]:
                 self.player.moveR()
                 for s in self.stormtroopers:
                     s.playermove_R(self.player.speed)
@@ -1645,7 +1726,6 @@ class Game(object):
             if keys[self.jetpack_key]:
                 self.player.moveUp()
 
-            
             
      
                 
@@ -1687,7 +1767,9 @@ class Game(object):
         Settings.obx2 = -1500
         Settings.current_platforms = 0
         self.sector_up()
-        pygame.mixer.music.rewind()
+        self.game_over = False
+        self.game_started = True
+        Sounds.play_music("Soundtrack.mp3")
 
     def check_figure_collision(self, platform, figure):
         if figure.rect.bottom >= platform.rect.top and figure.rect.bottom <= platform.rect.bottom:
@@ -1774,6 +1856,7 @@ class Game(object):
                 if pygame.sprite.collide_rect(r, s):
                     s.health = s.health - 100 * Settings.player_damage
                     r.explode()
+
             if s.rect.top >= 570:
                 s.kill()
    
@@ -1854,6 +1937,7 @@ class Game(object):
                 if pygame.sprite.collide_rect(o, a):
                         a.kill()
                         o.kill()
+    
 
 
     def reward(self):
@@ -1991,8 +2075,6 @@ class Game(object):
         Keybindings = self.Button3Font.render("Settings", 1, (self.fontcolor[self.colorindex3]))
         self.screen.blit(Keybindings, ((Settings.window_width // 2 -70) - self.fontmultiplier3*1.5,Settings.window_height // 2 + 230))
 
-
-
         pygame.display.flip()
         
 
@@ -2018,16 +2100,20 @@ class Game(object):
                         self.images.append(bitmap)
                     print("Starting...")
                     self.endless_mode = False
-                    Sounds.play_music()
+                    Sounds.play_music("Soundtrack.mp3")
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 +100 <= mouse[1] <= Settings.window_height // 2 + 200:
                     print("Endless mode")
+                    self.images.clear()
+                    for i in range(2):
+                        bitmap = pygame.image.load(os.path.join(
+                            Settings.path_image, f"crosshair{i}.png"))
+                        self.images.append(bitmap)
                     self.endless_mode = True
                     self.game_started = True
                 if Settings.window_width // 2 - 100 <= mouse[0] <= Settings.window_width // 2 + 100 and Settings.window_height // 2 + 200 <= mouse[1] <= Settings.window_height // 2 + 400:
                     print("Settings")
                     self.settings_window = True
 
-                    
 
 
 
@@ -2144,7 +2230,7 @@ class Game(object):
 
                 
             if self.changing_keybindings == True:
-                if event.type == pygame.KEYDOWN:
+                if event.type == pygame.KEYDOWN and not event.key == pygame.K_ESCAPE:
                     if self.changing_key == "walk_right":
                         self.walkR_key = pygame.key.key_code(pygame.key.name(event.key))
                         print(self.walkR_key)
@@ -2199,15 +2285,21 @@ class Game(object):
     def run(self):
         while self.running:
             self.clock.tick(60)
-                 
+
+            if self.game_over == True:
+                self.draw_game_over(self.screen)
+                self.watch_for_events()
+                self.change_screen()
+
             if self.game_started == True and self.cutscene_on == False:
                 self.watch_for_events()
                 self.update()
                 self.draw()
                 self.get_cursor_center()
                 pygame.mouse.set_visible(False)
+
                 
-            elif self.game_started == False and self.cutscene_on == False and self.settings_window == False:
+            elif self.game_started == False and self.cutscene_on == False and self.settings_window == False and self.game_over == False:
                 pygame.mouse.set_visible(True)
                 self.draw_start()
                 self.event_start()
@@ -2244,7 +2336,6 @@ class Game(object):
                 if event.key == pygame.K_r:
                     self.restart()
 
-
             elif event.type == pygame.QUIT:         
                 self.running = False
         
@@ -2255,9 +2346,19 @@ class Game(object):
             facing = "L"
         elif self.cursor_rect.center[0] > self.player.rect.center[0]:
             facing = "R"
+
+    def check_death(self):
+        if self.player.health == 0:
+            Sounds.play_music("death.mp3")
+        if self.player.health <= 0:
+            self.game_over = True
+            self.game_started = False
+
+        
         
 
     def update(self):
+        self.check_death()
         self.start_ob()
         self.upgrade_menu()
         self.platforms.update()
