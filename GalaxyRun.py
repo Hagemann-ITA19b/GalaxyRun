@@ -672,7 +672,6 @@ class Flame(pygame.sprite.Sprite):
         self.speed_h = 10
         self.speed_v = 0
         self.facing = facing
-        self.faced = False
         # self.flames_on = False
         self.images = []
         if facing == "R":
@@ -959,7 +958,6 @@ class tkprojectile(pygame.sprite.Sprite):
         self.speed_h = 10
         self.speed_v = 0
         self.facing = facing
-        self.faced = False
         self.images = []
         if facing == "R":
             for i in range(3):
@@ -1467,14 +1465,8 @@ class Game(object):
 
 
     def change_screen(self):
-        time = 0
-        if self.d_imageindex == 2:
-            time = 1000
-        else:
-            time = 300
-
         if pygame.time.get_ticks() > self.clock_time:
-            self.clock_time = pygame.time.get_ticks() + 1000#time
+            self.clock_time = pygame.time.get_ticks() + 1000
             self.d_imageindex += 1
             if self.d_imageindex >= len(self.d_images):
                 self.d_imageindex = 0
@@ -2348,8 +2340,9 @@ class Game(object):
             facing = "R"
 
     def check_death(self):
-        if self.player.health == 0:
+        if self.player.health == 0 or -1 or -2:
             Sounds.play_music("death.mp3")
+            print("checking death")
         if self.player.health <= 0:
             self.game_over = True
             self.game_started = False
