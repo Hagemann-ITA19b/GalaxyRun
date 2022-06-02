@@ -23,7 +23,7 @@ offset_x = 0
 offset_y = 0
 shaking = False
 BLACK = (0, 0, 0) 
-GRAY = (127, 127, 127) 
+GRAY = (127, 127, 127)  
 WHITE = (255, 255, 255)
 RED = (255, 0, 0) 
 GREEN = (0, 255, 0) 
@@ -33,6 +33,7 @@ CYAN = (0, 255, 255)
 MAGENTA = (255, 0, 255)
 PURP = (123, 32, 251)
 ORANGE = (255, 165, 0)
+LIGHTRED = (255, 50, 100)
 
 
 class Settings(object):
@@ -66,7 +67,7 @@ class Sounds(object):
     jetpack_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "jetpack.wav"))
     jetpack_sound.set_volume(0.01)
     shield_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "darksaber.wav"))
-    shield_sound.set_volume(0.01)
+    shield_sound.set_volume(0.1)
     explosion_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "explosion.wav"))
     explosion_sound.set_volume(0.01)
     shields_low = pygame.mixer.Sound(os.path.join(Settings.path_image, "shields_low.mp3"))
@@ -78,18 +79,21 @@ class Sounds(object):
     rocket_sound = pygame.mixer.Sound(os.path.join(Settings.path_image, "rocket_fire.wav"))
     rocket_sound.set_volume(0.01)
     player_hit = pygame.mixer.Sound(os.path.join(Settings.path_image, "hurt.wav"))
-    player_hit.set_volume(0.01)
+    player_hit.set_volume(0.2)
     ob_distant = pygame.mixer.Sound(os.path.join(Settings.path_image, "ob_distant.wav"))
-    ob_distant.set_volume(0.1)
+    ob_distant.set_volume(0.15)
     death = pygame.mixer.Sound(os.path.join(Settings.path_image, "death.mp3"))
     death.set_volume(1)
+    danger = pygame.mixer.Sound(os.path.join(Settings.path_image, "danger.mp3"))
+    danger.set_volume(0.3)
     
     
 
     def play_sound(sound):
-        busy = pygame.mixer.Channel(3).get_busy()
+        busy3 = pygame.mixer.Channel(3).get_busy()
+        busy1 = pygame.mixer.Channel(1).get_busy()
         if sound == "blaster":
-            pygame.mixer.Channel(1).play(Sounds.blaster_sound)
+            pygame.mixer.Channel(7).play(Sounds.blaster_sound)
         if sound == "refill":
             pygame.mixer.Channel(2).play(Sounds.refill_sound)
         if sound == "explosion":
@@ -99,20 +103,22 @@ class Sounds(object):
         if sound == "tk_blast":
             pygame.mixer.Channel(5).play(Sounds.tk_blast)
         if sound == "empty":
-            pygame.mixer.Channel(6).play(Sounds.empty_sound)
+            pygame.mixer.Channel(7).play(Sounds.empty_sound)
         if sound == "rocket":
             pygame.mixer.Channel(7).play(Sounds.rocket_sound)
         if sound == "player_hit":
             pygame.mixer.Channel(0).play(Sounds.player_hit)
         if sound == "jetpack":
-            pygame.mixer.Channel(7).play(Sounds.jetpack_sound)
+            pygame.mixer.Channel(6).play(Sounds.jetpack_sound)
         if sound == "shield_hit":
             pygame.mixer.Channel(0).play(Sounds.shield_sound)
         if sound == "jetpack":
             pygame.mixer.Channel(0).play(Sounds.jetpack_sound)
-        if sound == "ob_distant" and busy == False:
+        if sound == "ob_distant" and busy3 == False:
             pygame.mixer.Channel(3).play(Sounds.ob_distant)
             print("playing")
+        if sound == "danger" and busy1 == False:
+            pygame.mixer.Channel(1).play(Sounds.danger)
     
 
     def play_music(audio):
@@ -551,7 +557,7 @@ class Player(pygame.sprite.Sprite):
             self.passed_fueltime = 0
        
         if self.rect.top == self.platform_y and fuel < Settings.player_fuel:
-            fuel += 1
+            fuel += 2
 
         if self.endurance < 100:
             self.endurance += 1
@@ -728,7 +734,10 @@ class projectile(pygame.sprite.Sprite):
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, Settings.bullet_size)
         self.rect = self.image.get_rect()
-        self.rect.left = posy + 70
+        self.offset = 70
+        if facing == "L":
+            self.offset = -30
+        self.rect.left = posy + self.offset
         self.rect.top = posx + 50
         x = self.rect.left
         y = self.rect.top
@@ -801,7 +810,10 @@ class Rocket(pygame.sprite.Sprite):
         super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.rect = self.image.get_rect()
-        self.rect.left = posy + 70
+        self.offset = 70
+        if facing == "L":
+            self.offset = -30
+        self.rect.left = posy + self.offset
         self.rect.top = posx + 50
         x = self.rect.left
         y = self.rect.top
@@ -814,11 +826,18 @@ class Rocket(pygame.sprite.Sprite):
         self.exploding = False
         self.images = []
         for i in range(2):
-            bitmap = pygame.image.load(os.path.join(
-                Settings.path_image, f"rocket{i}.png"))
-            bitmap = pygame.transform.scale(bitmap, (50,20))
-            bitmap = pygame.transform.rotate(bitmap, self.angle)
-            self.images.append(bitmap)
+            if facing == "L":
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"rocket{i}.png"))
+                bitmap = pygame.transform.scale(bitmap, (50,20))
+                rotate = pygame.transform.rotate(bitmap, 180)
+
+                self.images.append(rotate)
+            else:
+                bitmap = pygame.image.load(os.path.join(
+                    Settings.path_image, f"rocket{i}.png"))
+                bitmap = pygame.transform.scale(bitmap, (50,20))
+                self.images.append(bitmap)
         self.imageindex = 0
         self.image = self.images[self.imageindex]
         self.clock_time = pygame.time.get_ticks()
@@ -1070,7 +1089,7 @@ class Cutscene():
             audio = self.audio3
         if self.played_audio == False:
             playing_audio =pygame.mixer.Sound(os.path.join(Settings.path_image, audio))
-            playing_audio.set_volume(0.01)
+            playing_audio.set_volume(0.1)
             pygame.mixer.Channel(0).play(playing_audio)
             self.played_audio = True
 
@@ -1305,7 +1324,7 @@ class Game(object):
             Settings.current_platforms = 0
             Settings.current_enemys = 0
 
-        if score_value < 2 and not self.cutscene_played == 1:
+        if score_value < 2 and not self.cutscene_played == 1 and not self.endless_mode:
             self.cutscene_on = True
            
 
@@ -1314,18 +1333,18 @@ class Game(object):
         if Settings.current_enemys < Settings.max_enemys:
             Settings.current_enemys += 1
             if self.endless_mode == False:
-                if score_value <= 200:
                     if Settings.current_platforms < Settings.max_platforms:
                         Settings.current_platforms += 1
                         ptx = randint(1500,1800)
                         pty = randint(100, 700)
                         ptl = randint(100,600)
                         self.platforms.add(Platform(ptx,pty ,ptl, 10))
-                        self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
+                        if score_value < 200:
+                            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
                     
-                elif score_value > 200 and score_value <= 400:
-                    self.platforms.add(Platform(1800, 700 ,randint(100,600), 10))
-                    self.stormbies.add(Stormbie("stormbieL0.png",100,1700,1))
+                    if score_value > 200 and score_value <= 400:
+                        self.platforms.add(Platform(1800, 200 ,randint(100,600), 10))
+                        self.stormbies.add(Stormbie("stormbieL0.png",100,1700,1))
 
             elif self.endless_mode == True:
                 if Settings.current_platforms < Settings.max_platforms:
@@ -1336,10 +1355,9 @@ class Game(object):
                     self.platforms.add(Platform(ptx,pty ,ptl, 10))
                     self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
 
-    def font(self):
+    def text_on_display(self):
         global bullets, offset_x, offset_y
         font = pygame.font.Font(None, 36)
-
 
         ammo_pos = 230
         if self.player.weapons_index == 0:
@@ -1439,11 +1457,14 @@ class Game(object):
             progress = 320
         if progress == 320:
             pygame.draw.rect(self.screen, (RED), pygame.Rect(0+offset_x, 0+offset_y, 1600, 720),4)
+            dangerzone = font.render("DANGER ZONE", 1, (RED))
+            self.screen.blit(dangerzone, (330+offset_x, 105+offset_y))
+            Sounds.play_sound("danger")
+
             
 
-        pygame.draw.rect(self.screen, (ORANGE), pygame.Rect(10 + offset_x,100 + offset_y,progress, 30)) 
+        pygame.draw.rect(self.screen, (LIGHTRED), pygame.Rect(10 + offset_x,100 + offset_y,progress, 30))
         pygame.draw.rect(self.screen, (RED), pygame.Rect(10 + offset_x, 100 + offset_y, 3200*0.1, 30), 4)
-        
 
 
         if self.player.energypoints == 0:
@@ -1483,16 +1504,15 @@ class Game(object):
             bitmap = pygame.image.load(os.path.join(
                 Settings.path_image, f"deathscreen{i}.png")) 
             self.d_images.append(bitmap)
-
         screen.blit(self.deathimg, (0, 0))
 
 
         Deathscreen = font_death.render("You died", 1, (RED))
         PressR = font.render("Press R to retry your luck", 1, (WHITE))
-        self.screen.blit(scoreprint, (700, 499))
-        self.screen.blit(levelprint, (700, 600))
-        self.screen.blit(Deathscreen, (485, Settings.window_height // 2 - 100))
-        self.screen.blit(PressR, (700, Settings.window_height // 2))
+        self.screen.blit(scoreprint, (750, 500))
+        self.screen.blit(levelprint, (765, 450))
+        self.screen.blit(Deathscreen, (Settings.window_width // 2 - 100, Settings.window_height // 2 - 100))
+        self.screen.blit(PressR, (670, Settings.window_height // 2))
         pygame.display.flip()
 
         
@@ -1722,6 +1742,7 @@ class Game(object):
      
                 
     def restart(self):
+        pygame.mixer.stop()
         global bullets, fuel, score_value, lives, spawncount, count, level
         for s in self.stormtroopers:
             s.kill()
@@ -1772,11 +1793,6 @@ class Game(object):
                         self.allowed_to_jump = True
             elif figure == self.player:
                     self.allowed_to_jump = False
-
-        # if figure.rect.top  <= platform.rect.bottom and figure.rect.top >= platform.rect.top:
-        #     if figure.rect.right  >= platform.rect.left and figure.rect.left <= platform.rect.right:
-        #         figure.rect.top = platform.rect.bottom
-        
 
 
     def collide(self):
@@ -1860,7 +1876,7 @@ class Game(object):
 
         if self.player.rect.top >= 720:
             self.player.kill()
-            self.player.health = self.player.health - 3
+            self.player.health = self.player.health - 1
 
         for pt in self.platforms:
             for r in self.rockets:
@@ -2056,8 +2072,10 @@ class Game(object):
             self.colorindex3 = 0
 
         self.Button1Font = pygame.font.Font(None, 39 + self.fontmultiplier1)
+        self.ucfont = pygame.font.Font(None, 20 + self.fontmultiplier1)
         Start = self.Button1Font.render("Start Adventure", 1, (self.fontcolor[self.colorindex1]))
         self.screen.blit(Start, ((Settings.window_width // 2 -110) - self.fontmultiplier1*2,Settings.window_height // 2 + 30))
+
 
         self.Button2Font = pygame.font.Font(None, 39 + self.fontmultiplier2)
         Endless = self.Button2Font.render("Endless Mode", 1, (self.fontcolor[self.colorindex2]))
@@ -2309,11 +2327,12 @@ class Game(object):
 
     def watch_for_events(self):
         global jumping
-    
+
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 self.mx, self.my = pygame.mouse.get_pos()
-                self.midclick()
+                if not self.game_over:
+                    self.midclick()
             if event.type == pygame.KEYDOWN:
                 if event.key == self.pause_key: 
                     self.game_started = False
@@ -2340,7 +2359,8 @@ class Game(object):
             facing = "R"
 
     def check_death(self):
-        if self.player.health == 0 or -1 or -2:
+        if self.player.health == 0:
+            pygame.mixer.stop()
             Sounds.play_music("death.mp3")
             print("checking death")
         if self.player.health <= 0:
@@ -2393,6 +2413,7 @@ class Game(object):
         self.shoot_dice()
         self.animate()
         self.xpabrtimer()
+        print(self.allowed_to_jump)
 
 
 
@@ -2413,7 +2434,7 @@ class Game(object):
         self.healthpacks.draw(self.screen)
         self.flames.draw(self.screen)
         self.rockets.draw(self.screen)
-        self.font()
+        self.text_on_display()
         self.screen.blit(self.image,self.cursor_rect) # draw the cursor
         pygame.display.flip()
 
