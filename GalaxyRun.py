@@ -1001,7 +1001,7 @@ class tkprojectile(pygame.sprite.Sprite):
         if self.facing == "L":
             self.rect.move_ip(-self.speed_h, self.speed_v)
         self.kill_after_time()
-        print(self.travel_time)
+        
 
 
     def animate(self):
@@ -1021,7 +1021,7 @@ class tkprojectile(pygame.sprite.Sprite):
 
     def kill_after_time(self):
         self.travel_time = self.travel_time + 1
-        if self.travel_time > 1000:
+        if self.travel_time > 150:
             self.kill()
 
 class Cutscene():
