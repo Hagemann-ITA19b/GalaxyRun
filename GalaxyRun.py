@@ -976,6 +976,7 @@ class tkprojectile(pygame.sprite.Sprite):
         self.rect.top = x
         self.speed_h = 10
         self.speed_v = 0
+        self.travel_time = 0
         self.facing = facing
         self.images = []
         if facing == "R":
@@ -999,6 +1000,8 @@ class tkprojectile(pygame.sprite.Sprite):
             self.rect.move_ip(self.speed_h, self.speed_v)
         if self.facing == "L":
             self.rect.move_ip(-self.speed_h, self.speed_v)
+        self.kill_after_time()
+        print(self.travel_time)
 
 
     def animate(self):
@@ -1015,6 +1018,11 @@ class tkprojectile(pygame.sprite.Sprite):
 
     def playermove_L(self, speed):
         self.rect.left += speed
+
+    def kill_after_time(self):
+        self.travel_time = self.travel_time + 1
+        if self.travel_time > 1000:
+            self.kill()
 
 class Cutscene():
     def __init__(self, image, text, text2, text3, addedtext, audio, audio2, audio3, texttime1, texttime2, texttime3):
@@ -1223,6 +1231,8 @@ class Game(object):
         self.d_imageindex = 0
         self.deathimg = self.d_images[self.d_imageindex]
         self.game_over = False
+        self.victory = False
+        Sounds.play_music("main.mp3")
 
     def start_ob(self):
         global shaking
@@ -1333,18 +1343,23 @@ class Game(object):
         if Settings.current_enemys < Settings.max_enemys:
             Settings.current_enemys += 1
             if self.endless_mode == False:
+                if score_value < 900:
                     if Settings.current_platforms < Settings.max_platforms:
                         Settings.current_platforms += 1
                         ptx = randint(1500,1800)
                         pty = randint(100, 700)
                         ptl = randint(100,600)
                         self.platforms.add(Platform(ptx,pty ,ptl, 10))
-                        if score_value < 200:
-                            self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
+                        self.stormtroopers.add(Stormtrooper("stormtrooperL0.png",100,ptx + randint(10, ptl - 60),pty - 160, randint(0, 100), False))
                     
-                    if score_value > 200 and score_value <= 400:
-                        self.platforms.add(Platform(1800, 200 ,randint(100,600), 10))
-                        self.stormbies.add(Stormbie("stormbieL0.png",100,1700,1))
+                if score_value > 900 and score_value <= 1000:
+                    self.platforms.add(Platform(1800, 250 ,1700, 20))
+                    self.stormbies.add(Stormbie("stormbieL0.png",100,randint(1500,1800),1))
+
+                if score_value > 1000:
+                    self.victory = True
+                    Sounds.play_music("victory.flac")
+                    score_value = score_value +1
 
             elif self.endless_mode == True:
                 if Settings.current_platforms < Settings.max_platforms:
@@ -1485,9 +1500,9 @@ class Game(object):
             self.screen.blit(self.upgrade3, (875, 140))
 
 
-    def change_screen(self):
+    def change_screen(self, time):
         if pygame.time.get_ticks() > self.clock_time:
-            self.clock_time = pygame.time.get_ticks() + 1000
+            self.clock_time = pygame.time.get_ticks() + time
             self.d_imageindex += 1
             if self.d_imageindex >= len(self.d_images):
                 self.d_imageindex = 0
@@ -1782,6 +1797,7 @@ class Game(object):
         self.sector_up()
         self.game_over = False
         self.game_started = True
+        self.victory = False
         Sounds.play_music("Soundtrack.mp3")
 
     def check_figure_collision(self, platform, figure):
@@ -1802,7 +1818,6 @@ class Game(object):
             for s in self.stormtroopers:
                 self.check_figure_collision(pt, s)
             
-
 
             for z in self.stormbies:
                 self.check_figure_collision(pt, z)
@@ -1828,7 +1843,6 @@ class Game(object):
     def gravity(self):
         if jumping == False:
             self.player.rect.top += 10
-
             
         for s in self.stormtroopers:
             s.rect.top += 10
@@ -1867,6 +1881,7 @@ class Game(object):
 
             if s.rect.top >= 570:
                 s.kill()
+            
    
             if pygame.sprite.spritecollide(s, self.flames, False):
                 s.health = s.health - 3 * Settings.player_damage
@@ -1901,6 +1916,20 @@ class Game(object):
                 if z.health <=0:
                     z.kill()
                     self.reward()
+            
+            if z.rect.top >= 570:
+                z.kill()
+                    
+            if pygame.sprite.spritecollide(z, self.orbital_bombardment, True):
+                z.kill()
+
+            for r in self.rockets:
+                if pygame.sprite.collide_rect(r, z):
+                    z.kill()
+                    r.explode()
+
+                       
+
 
         if pygame.sprite.spritecollide(self.player, self.tkprojectiles, True): #and self.player.shield == False:
                 self.player.invincible_off()
@@ -2276,6 +2305,39 @@ class Game(object):
                 if event.key == pygame.K_ESCAPE: 
                     self.settings_window = False
                     
+    def draw_victory(self,screen):
+        RGB = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+        offsetx = randint(-5,5)
+        offsety = randint(-5,5)
+        font_death = pygame.font.Font(None, 72)
+        font = pygame.font.Font(None, 36)
+        scoreprint = font.render("Score: " + str(round(score_value)) + "m", 1, (WHITE))
+        levelprint = font.render("Level: " + str(self.level), 1, (WHITE))
+        self.victory_screen = pygame.image.load(os.path.join(Settings.path_image, "victory.png"))
+        screen.blit(self.victory_screen, (0+offsetx, 0+offsety))
+
+        self.d_images.clear()
+        for i in range(6):
+            bitmap = pygame.image.load(os.path.join(
+                Settings.path_image, f"dance{i}.png"))
+            scaled = pygame.transform.scale(bitmap, (Settings.player_size[0]*2, Settings.player_size[1]*2)) 
+            self.d_images.append(scaled)
+        screen.blit(self.deathimg, (750+offsetx, 300+offsety))
+
+
+        for i in range(100):
+            pygame.draw.rect(screen, RGB[randint(0,len(RGB)-1)], (randint(0, Settings.window_width),randint(0, Settings.window_height), randint(1, 10), randint(1, 10)))
+        for i in range(100):
+            pygame.draw.circle(screen, RGB[randint(0,len(RGB)-1)], (randint(0, Settings.window_width), randint(0, Settings.window_height)), randint(1, 10))
+
+        victory = font_death.render("VICTORY!", 1, (GREEN))
+        self.screen.blit(scoreprint, (0+offsetx, 0+offsety))
+        self.screen.blit(levelprint, (0+offsetx, 30+offsety))
+        self.screen.blit(victory, (Settings.window_width // 2 - 100+offsetx, Settings.window_height // 2 - 100+offsety))
+
+        pygame.display.flip()
+        
+
 
 
     def check_buttons(self):
@@ -2299,9 +2361,15 @@ class Game(object):
             if self.game_over == True:
                 self.draw_game_over(self.screen)
                 self.watch_for_events()
-                self.change_screen()
+                self.change_screen(1000)
+            
+            if self.victory == True:
+                self.screen.fill(GREEN)
+                self.draw_victory(self.screen)
+                self.watch_for_events()
+                self.change_screen(100)
 
-            if self.game_started == True and self.cutscene_on == False:
+            elif self.game_started == True and self.cutscene_on == False:
                 self.watch_for_events()
                 self.update()
                 self.draw()
@@ -2323,6 +2391,9 @@ class Game(object):
                 pygame.mouse.set_visible(True)
                 self.preview_settings(self.screen)
                 self.check_buttons()
+            
+
+
         pygame.quit()       
 
     def watch_for_events(self):
@@ -2413,7 +2484,6 @@ class Game(object):
         self.shoot_dice()
         self.animate()
         self.xpabrtimer()
-        print(self.allowed_to_jump)
 
 
 
