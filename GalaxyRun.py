@@ -17,8 +17,8 @@ shieldpoints = 100
 jumping = False
 level = 0
 facing = "R"
-posx = 0
 posy = 0
+posx = 0
 offset_x = 0
 offset_y = 0
 shaking = False
@@ -209,11 +209,11 @@ class Stormbie(pygame.sprite.Sprite):
     def move(self):
         self.rect.left += self.speed_h
         self.rect.top += self.speed_v
-        if self.rect.left <= posy: #0:
+        if self.rect.left <= posx: #0:
                 self.speed_h = 2
                 self.facing = "R"
 
-        if self.rect.left >= posy:
+        if self.rect.left >= posx:
                 self.speed_h = -2
                 self.facing = "L"
 
@@ -306,9 +306,9 @@ class Stormtrooper(pygame.sprite.Sprite):
         
     def update(self):
         self.move()
-        if self.rect.left <= posy:
+        if self.rect.left <= posx:
             self.facing = "R"
-        if self.rect.left >= posy:
+        if self.rect.left >= posx:
             self.facing = "L"
 
 
@@ -439,9 +439,9 @@ class Player(pygame.sprite.Sprite):
         self.rect.top = 399
     
     def get_pos(self):
-        global posx, posy
-        posy = self.rect.left
-        posx = self.rect.top
+        global posy, posx
+        posx = self.rect.left
+        posy = self.rect.top
 
     def moveL(self):
         global facing, score_value
@@ -673,8 +673,8 @@ class Flame(pygame.sprite.Sprite):
         self.image = pygame.image.load(os.path.join(Settings.path_image, filename)).convert_alpha()
         self.image = pygame.transform.scale(self.image, (50,150))
         self.rect = self.image.get_rect()
-        self.rect.left = posy 
-        self.rect.top = posx
+        self.rect.left = posx 
+        self.rect.top = posy
         self.speed_h = 10
         self.speed_v = 0
         self.facing = facing
@@ -708,11 +708,11 @@ class Flame(pygame.sprite.Sprite):
     def update(self):
         global facing
         self.facing = facing
-        self.rect.top = posx 
+        self.rect.top = posy 
         if self.facing == "R":
-            self.rect.left = posy + 70
+            self.rect.left = posx + 70
         if self.facing == "L":
-                self.rect.left = posy - 50
+                self.rect.left = posx - 50
         
         if self.facing == "R":
             self.images.clear()
@@ -737,8 +737,8 @@ class projectile(pygame.sprite.Sprite):
         self.offset = 70
         if facing == "L":
             self.offset = -30
-        self.rect.left = posy + self.offset
-        self.rect.top = posx + 50
+        self.rect.left = posx + self.offset
+        self.rect.top = posy + 50
         x = self.rect.left
         y = self.rect.top
         self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
@@ -779,8 +779,8 @@ class Laser(pygame.sprite.Sprite):
     def __init__(self ,dx, dy):
         super().__init__()
         self.rect = self.image.get_rect()
-        self.rect.left = posy 
-        self.rect.top = posx
+        self.rect.left = posx 
+        self.rect.top = posy
         x = self.rect.left
         y = self.rect.top
         self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
@@ -813,8 +813,8 @@ class Rocket(pygame.sprite.Sprite):
         self.offset = 70
         if facing == "L":
             self.offset = -30
-        self.rect.left = posy + self.offset
-        self.rect.top = posx + 50
+        self.rect.left = posx + self.offset
+        self.rect.top = posy + 50
         x = self.rect.left
         y = self.rect.top
         self.angle = math.atan2(dy-y , dx-x) #dx and dy are the coordinates for the cursor
@@ -1201,6 +1201,8 @@ class Game(object):
             self.images.append(bitmap)
         self.imageindex = 0
         self.colorindex1 = 0
+        self.colorindex2 = 0
+        self.colorindex3 = 0
         self.cursor_rect = self.images[self.imageindex].get_rect()
         self.clock_time = pygame.time.get_ticks()
         self.animation_time = 100
@@ -1224,7 +1226,11 @@ class Game(object):
         self.cutscene_played = None
         
         self.multiply_font1 = False
+        self.multiply_font2 = False
+        self.multiply_font3 = False
         self.fontmultiplier1 = 1
+        self.fontmultiplier2 = 1
+        self.fontmultiplier3 = 1
 
         self.d_images = []
         self.d_images.append(pygame.image.load(os.path.join(Settings.path_image, 'deathscreen0.png')))
@@ -1434,11 +1440,11 @@ class Game(object):
         elif self.player.health == 1:
             Healthcolor = (255, 0, 0)
 
-        health_pos = posy - 25
+        health_pos = posx - 25
         for h in range(self.player.health):
             health_pos = health_pos + 25
-            pygame.draw.rect(self.screen, (Healthcolor), pygame.Rect(health_pos, posx - 10, 25, 11))
-            pygame.draw.rect(self.screen, (BLACK), pygame.Rect(health_pos, posx- 10, 25, 11), 2)
+            pygame.draw.rect(self.screen, (Healthcolor), pygame.Rect(health_pos, posy - 10, 25, 11))
+            pygame.draw.rect(self.screen, (BLACK), pygame.Rect(health_pos, posy- 10, 25, 11), 2)
 
         pygame.draw.rect(self.screen, (BLACK), pygame.Rect(10+offset_x,75+offset_y,Settings.player_fuel, 11), 2)
         pygame.draw.rect(self.screen, (GREEN), pygame.Rect(10+offset_x, 75+offset_y, fuel, 10))
@@ -1485,13 +1491,13 @@ class Game(object):
         if self.player.energypoints == 0:
             if self.length > 0:
                 self.length = self.length - 0.175
-            pygame.draw.rect(self.screen, (RED), pygame.Rect(posy, posx - 20, self.length, 11),)
-            pygame.draw.rect(self.screen, (150, 0, 0), pygame.Rect(posy, posx - 20, self.length, 11), 2)
+            pygame.draw.rect(self.screen, (RED), pygame.Rect(posx, posy - 20, self.length, 11),)
+            pygame.draw.rect(self.screen, (150, 0, 0), pygame.Rect(posx, posy - 20, self.length, 11), 2)
         if self.player.energypoints == 75:
             self.length = 75
 
-        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(posy, posx - 20, self.player.energypoints , 11))
-        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(posy, posx - 20, self.player.energypoints, 11), 2)
+        pygame.draw.rect(self.screen, (BLUE), pygame.Rect(posx, posy - 20, self.player.energypoints , 11))
+        pygame.draw.rect(self.screen, (BLACK), pygame.Rect(posx, posy - 20, self.player.energypoints, 11), 2)
 
 
         if self.upgrade_allowed == True:
@@ -1574,7 +1580,7 @@ class Game(object):
 
 
     def get_pos(self):
-        global posx, posy
+        global posy, posx
         for s in self.stormtroopers:
             s.tkposx = s.rect.left
             s.tkposy = s.rect.top
@@ -1583,8 +1589,8 @@ class Game(object):
             z.zposx = z.rect.left
             z.zposy = z.rect.top
 
-        posy = self.player.rect.left
-        posx = self.player.rect.top
+        posx = self.player.rect.left
+        posy = self.player.rect.top
 
     def shoot_bullet(self):
             global bullets
@@ -2299,8 +2305,6 @@ class Game(object):
                         print(self.sprint_key)
                         self.changing_keybindings = False
                     
-
-
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE: 
                     self.settings_window = False
@@ -2391,10 +2395,8 @@ class Game(object):
                 pygame.mouse.set_visible(True)
                 self.preview_settings(self.screen)
                 self.check_buttons()
-            
 
-
-        pygame.quit()       
+        pygame.quit()
 
     def watch_for_events(self):
         global jumping
@@ -2495,7 +2497,7 @@ class Game(object):
         self.background0.draw(self.screen)
         self.platforms.draw(self.screen)
         self.orbital_bombardment.draw(self.screen)
-        self.stormtroopers.draw(self.screen) #self.offsetx)
+        self.stormtroopers.draw(self.screen)
         self.stormbies.draw(self.screen)
         self.player.draw(self.screen)
         self.tkprojectiles.draw(self.screen)
