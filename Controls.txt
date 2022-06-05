@@ -1,0 +1,10 @@
+W - Jetpack
+A - Move left
+D - Move right
+R - Restart
+Spacebar - Jump
+Q and E - Switch between weapons
+Lshift - Sprint
+LMB - Flamethrower
+RMB - Shield
+Mouse3 - Shoot
