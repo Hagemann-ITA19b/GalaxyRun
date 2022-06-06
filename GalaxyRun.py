@@ -2350,7 +2350,6 @@ class Game(object):
         self.draw_buttons_settings(400, 250, "walk left", RED, pygame.key.name(self.walkL_key))
         self.draw_buttons_settings(400, 300, "jump", GREEN, pygame.key.name(self.jump_key))
         self.draw_buttons_settings(400, 350, "sprint", MAGENTA, pygame.key.name(self.sprint_key))
-        self.draw_buttons_settings(400, 500, "shoot", BLUE, pygame.key.name(self.shoot_key))
         self.draw_buttons_settings(400, 400, "jetpack", PURP, pygame.key.name(self.jetpack_key))
         self.draw_buttons_settings(400, 450, "pause", YELLOW, pygame.key.name(self.pause_key))
         
